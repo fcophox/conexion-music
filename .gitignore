@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# audio protegido (maestros + HLS cifrado, nunca al repo)
+/media
