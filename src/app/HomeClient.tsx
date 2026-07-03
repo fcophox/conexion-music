@@ -669,7 +669,7 @@ Que viaja directo a tu dirección.`;
             <div className="flex flex-col w-full">
 
               {/* Sticky Header Controls & Summary Bar */}
-              <div className={`sticky top-0 z-30 py-3 px-4 md:px-8 lg:px-12 flex items-center justify-between w-full ${showStickyHeader
+              <div className={`sticky top-0 z-30 py-3 px-4 md:px-8 lg:px-12 flex items-center justify-between w-full transition-colors -mb-16 md:mb-0 ${showStickyHeader
                 ? "bg-zinc-950/95 border-b border-zinc-900/60 backdrop-blur-md"
                 : "bg-transparent border-b border-transparent"
                 }`}>
@@ -704,58 +704,53 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 pb-36 md:pb-12">
+              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-8 lg:px-12 pb-36 md:pb-12">
 
                 {/* Album Hero Info */}
-                <div className="pt-1 md:pt-3 pb-6 md:pb-8 flex flex-col md:flex-row items-center md:items-end gap-6 md:gap-8 relative z-10">
-                  <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-[320px] md:h-[200px] lg:w-[200px] lg:h-[200px] shadow-2xl shrink-0 flex items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
+                <div className="relative pt-0 lg:pt-3 pb-6 md:pb-8 flex flex-col lg:flex-row items-center lg:items-end gap-6 md:gap-8 z-10">
+                  
+                  {/* MOBILE FULL WIDTH BACKGROUND COVER */}
+                  <div className="absolute top-0 left-0 right-0 md:hidden z-0">
+                    <div className="w-full h-[360px] relative">
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-zinc-950/70 to-zinc-950 z-10" />
+                      <div className="w-full h-full overflow-hidden">
+                        {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full object-cover scale-105", selectedAlbum.coverImage)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* DESKTOP COVER */}
+                  <div className="hidden md:flex md:w-64 md:h-64 lg:w-56 lg:h-56 xl:w-64 xl:h-64 shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
-                  <div className="flex-1 text-center md:text-left space-y-4">
-                    <span className="text-xs uppercase tracking-widest font-extrabold text-zinc-400">ÁLBUM</span>
-                    <div className="flex flex-col md:flex-row items-center md:justify-between gap-4 w-full pr-4 md:pr-8 lg:pr-12">
-                      <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white leading-none tracking-tight">{selectedAlbum.title}</h1>
-                      <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-4 sm:h-6 lg:h-8 w-auto opacity-80 shrink-0" />
+                  {/* ALBUM METADATA */}
+                  <div className="flex-1 text-center lg:text-left space-y-3 md:space-y-4 z-10 px-4 md:px-0 pt-[180px] md:pt-0 w-full relative min-w-0">
+                    <span className="text-xs uppercase tracking-widest font-extrabold text-zinc-300 md:text-zinc-400 drop-shadow-md">ÁLBUM</span>
+                    <div className="flex flex-col lg:flex-row items-center lg:items-center lg:justify-between gap-2 lg:gap-4 w-full lg:pr-12">
+                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
+                      <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 lg:h-8 w-auto opacity-80 shrink-0 hidden lg:block" />
                     </div>
-                    <p className="text-zinc-400 text-sm max-w-2xl leading-relaxed">{selectedAlbum.description}</p>
+                    <p className="hidden md:block text-zinc-300 md:text-zinc-400 text-sm max-w-2xl leading-relaxed drop-shadow-md mx-auto lg:mx-0">{selectedAlbum.description}</p>
 
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 text-xs">
+                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 md:gap-3 text-xs drop-shadow-md">
                       <div className="flex items-center gap-1 text-emerald-400 font-bold">
                         <Music className="w-4 h-4" />
                         <span>{selectedAlbum.creator}</span>
                       </div>
-                      <span className="text-zinc-600">•</span>
-                      <span className="text-zinc-300 font-semibold">{selectedAlbum.year}</span>
-                      <span className="text-zinc-600">•</span>
-                      <span className="text-zinc-400">{selectedAlbum.tracksCount}</span>
-                      <span className="text-zinc-600">•</span>
-                      <span className="text-zinc-400">{selectedAlbum.durationText}</span>
+                      <span className="text-zinc-400 md:text-zinc-600">•</span>
+                      <span className="text-white md:text-zinc-300 font-semibold">{selectedAlbum.year}</span>
+                      <span className="text-zinc-400 md:text-zinc-600">•</span>
+                      <span className="text-zinc-300 md:text-zinc-400">{selectedAlbum.tracksCount}</span>
+                      <span className="text-zinc-400 md:text-zinc-600">•</span>
+                      <span className="text-zinc-300 md:text-zinc-400">{selectedAlbum.durationText}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Actions Panel */}
-                <div className="py-4 flex items-center justify-between relative z-10 border-t border-zinc-900/60 bg-zinc-950/20 backdrop-blur-sm">
-                  <div className="flex items-center gap-6">
-                    <button
-                      onClick={() => playEntireAlbum(selectedAlbum)}
-                      className="w-14 h-14 bg-emerald-500 hover:bg-emerald-400 text-black rounded-full flex items-center justify-center hover:scale-105 transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
-                    >
-                      <Play className="w-6 h-6 text-black" />
-                    </button>
-
-                    <button className="text-zinc-400 hover:text-white transition-colors cursor-pointer">
-                      <Download className="w-6 h-6" />
-                    </button>
-                    <button className="text-zinc-400 hover:text-white transition-colors cursor-pointer">
-                      <MoreHorizontal className="w-6 h-6" />
-                    </button>
-                  </div>
-                </div>
 
                 {/* Track List */}
-                <div className="pb-24 relative z-10">
+                <div className="pb-24 px-4 md:px-0 relative z-10">
                   <div className="w-full border-t border-zinc-900 mt-2">
 
                     <div className="grid grid-cols-12 gap-4 py-3 text-zinc-400 text-xs font-bold uppercase tracking-wider px-4 border-b border-zinc-900/60">
@@ -800,7 +795,7 @@ Que viaja directo a tu dirección.`;
                             </div>
 
                             {/* Title Info */}
-                            <div className="col-span-11 md:col-span-6 flex items-center gap-3 min-w-0">
+                            <div className="col-span-7 md:col-span-6 flex items-center gap-3 min-w-0">
                               <div className="w-10 h-10 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
                                 {renderCoverArt(track.coverArtDesign, track.coverGradient, "w-full h-full", track.coverImage)}
                               </div>
