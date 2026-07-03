@@ -11,6 +11,7 @@ import {
   Check,
   Loader2,
   BarChart3,
+  Heart,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -377,11 +378,12 @@ function AlbumEditor({
       </div>
 
       {/* Encabezado de tabla */}
-      <div className="grid grid-cols-[auto_2rem_1fr_auto] items-center gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
+      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
         <span className="w-5" />
         <span className="text-center">#</span>
         <span>Título</span>
-        <span className="text-right">Reproducciones</span>
+        <span className="text-right min-w-[120px]">Reproducciones</span>
+        <span className="text-right w-16">Me gusta</span>
       </div>
 
       {/* Lista arrastrable */}
@@ -404,7 +406,7 @@ function AlbumEditor({
                 setDragIndex(null);
                 setOverIndex(null);
               }}
-              className={`grid grid-cols-[auto_2rem_1fr_auto] items-center gap-4 px-3 py-2.5 rounded-lg border transition-all ${
+              className={`grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-4 px-3 py-2.5 rounded-lg border transition-all ${
                 isDragging
                   ? "opacity-40 border-emerald-500/50 bg-zinc-900"
                   : isOver
@@ -441,7 +443,7 @@ function AlbumEditor({
               </div>
 
               {/* Reproducciones con barra proporcional */}
-              <div className="flex items-center gap-3 justify-end w-40">
+              <div className="flex items-center gap-3 justify-end min-w-[120px]">
                 <div className="hidden sm:block flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500/80 rounded-full"
@@ -452,6 +454,12 @@ function AlbumEditor({
                   <Play className="w-3 h-3 text-emerald-400 fill-current" />
                   {track.plays.toLocaleString("es")}
                 </div>
+              </div>
+
+              {/* Likes */}
+              <div className="flex items-center justify-end gap-1.5 text-sm font-mono text-zinc-300 tabular-nums w-16">
+                <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+                {track.likes.toLocaleString("es")}
               </div>
             </div>
           );

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSecureAudio } from "@/hooks/useSecureAudio";
-import type { Album, Track } from "@/lib/catalog-types";
+import type { Album, Track, AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 import {
   Home as HomeIcon,
   Search,
@@ -28,7 +28,7 @@ import {
   Clock
 } from "lucide-react";
 
-export default function HomeClient({ albums }: { albums: Album[] }) {
+export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
@@ -57,10 +57,32 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
     }
   }, []);
 
-  const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
+  const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithStats | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
-  const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<Track | null>(null);
+  const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<TrackWithStats | null>(null);
+
+  // State for optimistic like updates
+  const [localLikes, setLocalLikes] = useState<Record<number, number>>({});
+
+  const handleLike = async (e: React.MouseEvent, trackId: number, initialLikes: number) => {
+    e.stopPropagation();
+    const currentLikes = localLikes[trackId] ?? initialLikes;
+    setLocalLikes(prev => ({ ...prev, [trackId]: currentLikes + 1 }));
+    try {
+      const res = await fetch("/api/stream/like", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLocalLikes(prev => ({ ...prev, [trackId]: data.likes }));
+      }
+    } catch {
+      setLocalLikes(prev => ({ ...prev, [trackId]: currentLikes }));
+    }
+  };
 
   // Reset scroll to top when selecting an album or song lyrics
   useEffect(() => {
@@ -81,7 +103,7 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
   };
 
   // Track playback state (tied to whichever track is currently playing globally)
-  const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>(albums[0]?.tracks ?? []);
+  const [currentPlaylist, setCurrentPlaylist] = useState<TrackWithStats[]>(albums[0]?.tracks ?? []);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -116,7 +138,7 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const handleSelectSongFromSearch = (track: Track) => {
+  const handleSelectSongFromSearch = (track: TrackWithStats) => {
     const album = albums.find(a => a.tracks.some(t => t.id === track.id));
     if (album) {
       const trackIndex = album.tracks.findIndex(t => t.id === track.id);
@@ -222,7 +244,7 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
     setCurrentTime(0);
   };
 
-  const handleTrackSelectInAlbum = (albumTracks: Track[], index: number) => {
+  const handleTrackSelectInAlbum = (albumTracks: TrackWithStats[], index: number) => {
     const selectedTrack = albumTracks[index];
     const isThisTrackActive = currentTrack && currentTrack.id === selectedTrack.id;
     
@@ -236,7 +258,7 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
     }
   };
 
-  const playEntireAlbum = (album: Album) => {
+  const playEntireAlbum = (album: AlbumWithStats) => {
     setCurrentPlaylist(album.tracks);
     setCurrentTrackIndex(0);
     setCurrentTime(0);
@@ -831,13 +853,21 @@ Que viaja directo a tu dirección.`;
                               </div>
                             </div>
 
-                            {/* Album info */}
+                            {/* Album info & Stats */}
                             <div className="col-span-4 hidden md:block text-zinc-400 text-sm truncate group-hover:text-zinc-300">
-                              {track.album}
+                              <span className="block truncate">{track.album}</span>
                             </div>
 
-                            {/* Duration & Chevron */}
+                            {/* Duration, Like & Chevron */}
                             <div className="col-span-4 md:col-span-1 flex items-center justify-end gap-3 text-zinc-400 text-sm">
+                              <button 
+                                onClick={(e) => handleLike(e, track.id, track.likes)}
+                                className="flex items-center gap-1 hover:text-emerald-500 cursor-pointer rounded transition-colors text-zinc-500 hover:text-white"
+                                title="Me gusta"
+                              >
+                                <Heart className={`w-3.5 h-3.5 ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'fill-emerald-500 text-emerald-500' : ''}`} />
+                                <span className="text-xs">{localLikes[track.id] ?? track.likes}</span>
+                              </button>
                               <span className="font-mono text-xs">{formatTime(track.duration)}</span>
                               <button
                                 onClick={(e) => {

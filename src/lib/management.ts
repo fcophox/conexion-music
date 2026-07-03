@@ -19,9 +19,13 @@ function sign(payload: string): string {
   return createHmac("sha256", secret()).update(payload).digest("hex");
 }
 
-export function checkPassword(password: string): boolean {
-  const expected = process.env.MANAGEMENT_PASSWORD;
-  if (!expected) throw new Error("MANAGEMENT_PASSWORD no está definido en .env.local");
+import { supabase } from "./supabase";
+
+export async function checkPassword(password: string): Promise<boolean> {
+  const { data } = await supabase.from("settings").select("value").eq("id", "MANAGEMENT_PASSWORD").single();
+  const expected = data?.value;
+  
+  if (!expected) throw new Error("MANAGEMENT_PASSWORD no encontrado en Supabase settings");
   const a = Buffer.from(password);
   const b = Buffer.from(expected);
   if (a.length !== b.length) return false;

@@ -31,6 +31,7 @@ export interface Album {
 // Álbum con estadísticas para el panel de administración.
 export interface TrackWithStats extends Track {
   plays: number;
+  likes: number;
 }
 
 export interface AlbumWithStats extends Omit<Album, "tracks"> {
