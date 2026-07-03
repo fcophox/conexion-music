@@ -21,17 +21,25 @@ async function readJson<T>(file: string): Promise<T | null> {
 // Escritura atómica: escribe a un temporal y renombra, para que un lector nunca
 // vea un JSON a medio escribir.
 async function writeJsonAtomic(file: string, data: unknown): Promise<void> {
-  await mkdir(DATA_ROOT, { recursive: true });
-  const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
-  await writeFile(tmp, JSON.stringify(data, null, 2), "utf-8");
-  await rename(tmp, file);
+  try {
+    await mkdir(DATA_ROOT, { recursive: true });
+    const tmp = `${file}.${process.pid}.${Date.now()}.tmp`;
+    await writeFile(tmp, JSON.stringify(data, null, 2), "utf-8");
+    await rename(tmp, file);
+  } catch (error) {
+    console.warn(`No se pudo escribir en ${file} (entorno read-only como Vercel).`);
+  }
 }
 
 export async function getCatalog(): Promise<Album[]> {
   const existing = await readJson<Album[]>(CATALOG_PATH);
   if (existing) return existing;
   // Primer arranque: sembrar desde SEED_ALBUMS.
-  await writeJsonAtomic(CATALOG_PATH, SEED_ALBUMS);
+  try {
+    await writeJsonAtomic(CATALOG_PATH, SEED_ALBUMS);
+  } catch (error) {
+    console.warn("No se pudo escribir el catálogo inicial (posible entorno read-only como Vercel). Usando datos en memoria.");
+  }
   return SEED_ALBUMS;
 }
 
