@@ -307,25 +307,47 @@ function AlbumEditor({
   return (
     <div className="space-y-5">
       {/* Cabecera del álbum */}
-      <div className="flex items-end gap-5">
-        {album.coverImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={album.coverImage}
-            alt=""
-            className="w-24 h-24 md:w-32 md:h-32 rounded-lg object-cover shadow-xl shrink-0"
-          />
-        ) : (
-          <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-zinc-800 shrink-0" />
-        )}
-        <div className="min-w-0">
-          <span className="text-xs uppercase tracking-widest font-bold text-zinc-500">Álbum</span>
-          <h2 className="text-2xl md:text-4xl font-black text-white leading-tight truncate">
-            {album.title}
-          </h2>
-          <p className="text-zinc-400 text-sm mt-1">
-            {album.artist} • {album.year} • {tracks.length} canciones
-          </p>
+      <div className="flex flex-wrap items-center justify-between gap-5">
+        <div className="flex items-end gap-5">
+          {album.coverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={album.coverImage}
+              alt=""
+              className="w-24 h-24 md:w-32 md:h-32 rounded-lg object-cover shadow-xl shrink-0"
+            />
+          ) : (
+            <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-zinc-800 shrink-0" />
+          )}
+          <div className="min-w-0">
+            <span className="text-xs uppercase tracking-widest font-bold text-zinc-500">Álbum</span>
+            <h2 className="text-2xl md:text-4xl font-black text-white leading-tight truncate">
+              {album.title}
+            </h2>
+            <p className="text-zinc-400 text-sm mt-1">
+              {album.artist} • {album.year} • {tracks.length} canciones
+            </p>
+          </div>
+        </div>
+
+        {/* Status Toggle */}
+        <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+          <span className="text-sm font-semibold text-zinc-300">Estado: {album.disabled ? 'Bloqueado (Pronto)' : 'Público'}</span>
+          <button
+            onClick={async () => {
+              const res = await fetch("/api/management/status", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ albumId: album.id, disabled: !album.disabled }),
+              });
+              if (res.ok) {
+                onSaved();
+              }
+            }}
+            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${album.disabled ? 'bg-zinc-700' : 'bg-emerald-500'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${album.disabled ? 'translate-x-1' : 'translate-x-6'}`} />
+          </button>
         </div>
       </div>
 

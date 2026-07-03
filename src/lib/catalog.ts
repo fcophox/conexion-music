@@ -88,3 +88,16 @@ export async function reorderAlbumTracks(
   await writeJsonAtomic(CATALOG_PATH, albums);
   return { ok: true };
 }
+
+export async function toggleAlbumStatus(
+  albumId: string,
+  disabled: boolean
+): Promise<{ ok: boolean; error?: string }> {
+  const albums = await getCatalog();
+  const album = albums.find((a) => a.id === albumId);
+  if (!album) return { ok: false, error: "album not found" };
+
+  album.disabled = disabled;
+  await writeJsonAtomic(CATALOG_PATH, albums);
+  return { ok: true };
+}

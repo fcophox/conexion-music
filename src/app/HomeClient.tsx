@@ -42,6 +42,21 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
     return () => clearTimeout(timer);
   }, []);
 
+  const [greeting, setGreeting] = useState("Buenas noches");
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour >= 3 && hour < 7) {
+      setGreeting("Buenas conexiones");
+    } else if (hour >= 7 && hour < 12) {
+      setGreeting("Buenos días");
+    } else if (hour >= 12 && hour < 20) {
+      setGreeting("Buenas tardes");
+    } else {
+      setGreeting("Buenas noches");
+    }
+  }, []);
+
   const [selectedAlbum, setSelectedAlbum] = useState<Album | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
@@ -152,7 +167,7 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
       countedTrackRef.current !== currentTrack.id
     ) {
       countedTrackRef.current = currentTrack.id;
-      fetch(`/api/stream/${currentTrack.id}/play`, { method: "POST" }).catch(() => {});
+      fetch(`/api/stream/${currentTrack.id}/play`, { method: "POST" }).catch(() => { });
     }
   }, [currentTrack?.id, isPlaying, hasRealAudio]);
 
@@ -208,10 +223,17 @@ export default function HomeClient({ albums }: { albums: Album[] }) {
   };
 
   const handleTrackSelectInAlbum = (albumTracks: Track[], index: number) => {
-    setCurrentPlaylist(albumTracks);
-    setCurrentTrackIndex(index);
-    setCurrentTime(0);
-    setIsPlaying(true);
+    const selectedTrack = albumTracks[index];
+    const isThisTrackActive = currentTrack && currentTrack.id === selectedTrack.id;
+    
+    if (isThisTrackActive) {
+      setIsPlaying(!isPlaying);
+    } else {
+      setCurrentPlaylist(albumTracks);
+      setCurrentTrackIndex(index);
+      setCurrentTime(0);
+      setIsPlaying(true);
+    }
   };
 
   const playEntireAlbum = (album: Album) => {
@@ -607,7 +629,7 @@ Que viaja directo a tu dirección.`;
               {/* Top Bar / Greetings */}
               <div className="flex items-center justify-between">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white animate-fade-in">Buenas Noches</h1>
+                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white animate-fade-in">{greeting}</h1>
                   <p className="text-zinc-400 text-sm mt-1">Explora tu esfera musical personalizada.</p>
                 </div>
               </div>
@@ -619,14 +641,14 @@ Que viaja directo a tu dirección.`;
                   <h2 className="text-xl font-bold text-white tracking-wide">Hecho para ti</h2>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
                   {albums.map((album) => (
                     <div
                       key={album.id}
                       onClick={() => !album.disabled && setSelectedAlbum(album)}
                       className={`p-4 rounded-xl transition-all duration-300 ${album.disabled
-                        ? "opacity-55 cursor-not-allowed bg-zinc-950/40"
-                        : "bg-zinc-950 hover:bg-zinc-900/50 group cursor-pointer"
+                        ? "opacity-55 cursor-not-allowed bg-zinc-950/0"
+                        : "bg-zinc-950/0 hover:bg-zinc-900/50 group cursor-pointer"
                         }`}
                     >
                       <div className="w-full aspect-square rounded-lg overflow-hidden bg-zinc-800 relative mb-4 flex items-center justify-center">
@@ -708,7 +730,7 @@ Que viaja directo a tu dirección.`;
 
                 {/* Album Hero Info */}
                 <div className="relative pt-0 lg:pt-3 pb-6 md:pb-8 flex flex-col lg:flex-row items-center lg:items-end gap-6 md:gap-8 z-10">
-                  
+
                   {/* MOBILE FULL WIDTH BACKGROUND COVER */}
                   <div className="absolute top-0 left-0 right-0 md:hidden z-0">
                     <div className="w-full h-[360px] relative">
@@ -951,10 +973,13 @@ Que viaja directo a tu dirección.`;
                     {/* Filter tracks */}
                     {(() => {
                       const query = searchQuery.toLowerCase().trim();
-                      const filtered = albums.flatMap(a => a.tracks).filter(t =>
-                        t.title.toLowerCase().includes(query) ||
-                        t.album.toLowerCase().includes(query)
-                      );
+                      const filtered = albums
+                        .filter(a => !a.disabled)
+                        .flatMap(a => a.tracks)
+                        .filter(t =>
+                          t.title.toLowerCase().includes(query) ||
+                          t.album.toLowerCase().includes(query)
+                        );
 
                       if (filtered.length === 0) {
                         return (

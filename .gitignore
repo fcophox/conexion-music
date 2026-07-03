@@ -40,8 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# audio protegido (maestros + HLS cifrado, nunca al repo)
-/media
+# audio protegido: los archivos maestros (fuente original) no van al repo.
+# El HLS cifrado y las claves SÍ se versionan porque el servidor los lee en
+# runtime (/api/stream) y Vercel necesita empaquetarlos en la función.
+/media/masters
 
 # datos del catálogo (fuente de verdad editable desde /management)
 /data
