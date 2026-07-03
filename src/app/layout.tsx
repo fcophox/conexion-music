@@ -13,8 +13,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Conexionify - Real-time API & Database Integrations",
-  description: "Connect and synchronize your APIs, databases, and microservices in real-time with zero code changes.",
+  title: "Conexión",
+  description: "Escucha la discografía completa de conexión. Explora sus álbumes, letras y música alternativa en un solo lugar.",
+  openGraph: {
+    title: "Conexión",
+    description: "Escucha la discografía completa de conexión. Explora sus álbumes, letras y música alternativa en un solo lugar.",
+    siteName: "Conexión",
+    locale: "es_ES",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  }
 };
 
 export default function RootLayout({

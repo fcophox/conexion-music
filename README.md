@@ -43,3 +43,25 @@ Sigue estos pasos para correr el proyecto en tu propia máquina:
 ---
 
 *Desarrollado con 💚 para expandir la música de Conexión.*
+
+## Panel de administración (/management)
+
+Mantenedor web protegido por login para gestionar el catálogo.
+
+- **Acceso**: `/management`. Contraseña en `MANAGEMENT_PASSWORD` (`.env.local`).
+  El login usa una cookie de sesión firmada (HMAC con `STREAM_SECRET`), válida 8 h.
+- **Vista**: sidebar con los discos; al seleccionar uno se listan sus canciones
+  con el número de **reproducciones** de cada una y una barra proporcional.
+- **Reordenar**: arrastra las canciones por la manija (⋮⋮) de la izquierda y pulsa
+  **Guardar orden**. El nuevo orden se persiste y el home lo toma al recargar.
+
+### Dónde viven los datos
+
+- `data/catalog.json` — fuente de verdad del catálogo (álbumes, canciones y su
+  orden). Se siembra desde `src/lib/seed.ts` la primera vez. Ignorado por git.
+- `data/plays.json` — contador de reproducciones por pista. Se incrementa cuando
+  una canción real empieza a sonar (una vez por reproducción).
+
+El home (`src/app/page.tsx`) es un componente de servidor `force-dynamic` que lee
+`data/catalog.json` en cada request, por eso los cambios del panel se reflejan al
+recargar sin reconstruir.

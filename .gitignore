@@ -42,3 +42,6 @@ next-env.d.ts
 
 # audio protegido (maestros + HLS cifrado, nunca al repo)
 /media
+
+# datos del catálogo (fuente de verdad editable desde /management)
+/data
