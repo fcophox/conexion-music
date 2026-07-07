@@ -480,7 +480,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
               {/* Sticky Header back button */}
               <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
-                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 flex items-center gap-4">
+                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
                   <button
                     onClick={() => updateUrl(selectedAlbum?.id || null, null)}
                     className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
@@ -492,11 +492,11 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
               </div>
 
               {/* Main Content Layout */}
-              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 py-8 relative z-20 flex flex-col lg:flex-row gap-8 lg:gap-16 pb-44">
+              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 py-8 relative z-20 flex flex-col lg:flex-row gap-8 lg:gap-16 pb-44">
 
                 {/* Left Column: Big Cover and Info */}
-                <div className="w-full lg:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
-                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-[380px] lg:h-[380px] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                <div className="w-full lg:w-[320px] xl:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
+                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-[300px] lg:h-[300px] xl:w-[380px] xl:h-[380px] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                     {renderCoverArt(selectedTrackForLyrics.coverArtDesign, selectedTrackForLyrics.coverGradient, "w-full h-full", selectedTrackForLyrics.coverImage)}
                   </div>
 
@@ -677,7 +677,7 @@ Que viaja directo a tu dirección.`;
 
               <div className="relative max-w-3xl mx-auto px-4 md:px-8 pt-14 md:pt-20 pb-44 space-y-10">
                 <div className="flex flex-col items-center text-center space-y-6">
-                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-16 w-auto drop-shadow-lg" />
+                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-14 w-auto drop-shadow-lg" />
                   <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sobre conexión</span>
                   <p className="text-zinc-300 text-base md:text-lg leading-relaxed max-w-2xl">
                     conexión es una banda de rock alternativo en español. Este es su espacio
@@ -735,7 +735,7 @@ Que viaja directo a tu dirección.`;
               <div className="relative w-full min-h-[300px] md:min-h-[350px] lg:min-h-[400px] flex items-center mb-8">
 
                 {/* CONTENT aligned LEFT */}
-                <div className="relative w-full max-w-[1400px] mx-auto px-4 md:px-8 lg:px-12 py-10 md:py-16">
+                <div className="relative w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 py-10 md:py-16">
                   <div className="max-w-xl flex flex-col items-start text-left space-y-6 animate-fade-in">
 
                     {/* Greeting + Logo */}
@@ -744,14 +744,14 @@ Que viaja directo a tu dirección.`;
                       <img
                         src="/brand/conexionlogo.svg"
                         alt="Conexión"
-                        className="h-12 md:h-16 lg:h-20 w-auto drop-shadow-2xl"
+                        className="h-12 md:h-14 lg:h-16 w-auto drop-shadow-2xl"
                       />
                     </div>
 
                     {/* Random Song Button */}
                     <button
                       onClick={playRandomSong}
-                      className="flex items-center gap-3 px-8 py-3 bg-[#FFC107] hover:bg-[#FFD54F] text-black font-bold rounded-full transition-all hover:scale-105 shadow-lg shadow-[#FFC107]/20 cursor-pointer"
+                      className="flex items-center gap-3 px-6 py-2.5 md:px-8 md:py-3 bg-[#FFC107] hover:bg-[#FFD54F] text-black font-bold rounded-full transition-all hover:scale-105 shadow-lg shadow-[#FFC107]/20 cursor-pointer"
                     >
                       <Shuffle className="w-5 h-5" />
                       <span>Canción aleatoria</span>
@@ -779,7 +779,7 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* DISCOS ROW (horizontal scroll, Netflix-style) */}
-              <div className="relative max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 space-y-4">
+              <div className="relative max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 space-y-4">
 
                 <div
                   ref={discosRef}
@@ -796,7 +796,7 @@ Que viaja directo a tu dirección.`;
                         if (drag.current.moved) return;
                         if (!album.disabled) updateUrl(album.id, null);
                       }}
-                      className={`w-[46%] sm:w-[38%] md:w-[30%] shrink-0 rounded-2xl transition-all duration-300 ${album.disabled
+                      className={`w-[46%] sm:w-[38%] md:w-[28%] lg:w-[22%] xl:w-[18%] shrink-0 rounded-2xl transition-all duration-300 ${album.disabled
                         ? "opacity-55 cursor-not-allowed"
                         : "group cursor-pointer hover:-translate-y-1"
                         }`}
@@ -852,7 +852,7 @@ Que viaja directo a tu dirección.`;
                 ? "bg-zinc-950/95 border-b border-zinc-900/60 backdrop-blur-md"
                 : "bg-transparent border-b border-transparent"
                 }`}>
-                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 flex items-center justify-between">
+                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => updateUrl(null, null)}
@@ -883,7 +883,7 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-8 lg:px-12 pb-44">
+              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-44">
 
                 {/* Album Hero Info */}
                 <div className="relative pt-0 lg:pt-3 pb-6 md:pb-8 flex flex-col lg:flex-row items-center lg:items-end gap-6 md:gap-8 z-10">
@@ -899,7 +899,7 @@ Que viaja directo a tu dirección.`;
                   </div>
 
                   {/* DESKTOP COVER */}
-                  <div className="hidden md:flex md:w-28 md:h-28 lg:w-36 lg:h-36 xl:w-48 xl:h-48 shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
+                  <div className="hidden md:flex md:w-24 md:h-24 lg:w-32 lg:h-32 xl:w-40 xl:h-40 shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
