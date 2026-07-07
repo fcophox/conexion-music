@@ -73,6 +73,16 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   useEffect(() => {
     const albumId = searchParams.get("album");
     const trackSlug = searchParams.get("track");
+    const view = searchParams.get("view");
+
+    if (view === "about") {
+      setIsAboutOpen(true);
+      setSelectedAlbum(null);
+      setSelectedTrackForLyrics(null);
+      return;
+    } else {
+      setIsAboutOpen(false);
+    }
 
     if (albumId) {
       const album = albums.find((a) => a.id === albumId);
@@ -108,6 +118,8 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
     },
     [router]
   );
+
+
 
   // State for optimistic like updates
   const [localLikes, setLocalLikes] = useState<Record<number, number>>({});
@@ -190,7 +202,6 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
     if (album) {
       const trackIndex = album.tracks.findIndex((t) => t.id === track.id);
       updateUrl(album.id, null);
-      setIsAboutOpen(false);
       setCurrentPlaylist(album.tracks);
       setCurrentTrackIndex(trackIndex);
       setIsPlaying(true);
@@ -316,12 +327,10 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   // Navegación principal (barra inferior)
   const goHome = () => {
     updateUrl(null, null);
-    setIsAboutOpen(false);
   };
 
   const openAbout = () => {
-    setSelectedTrackForLyrics(null);
-    setIsAboutOpen(true);
+    router.push("?view=about", { scroll: false });
   };
 
   const isHomeActive = !isAboutOpen && selectedAlbum === null && selectedTrackForLyrics === null;
@@ -663,57 +672,115 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             /* ABOUT / SOBRE CONEXIÓN VIEW                                               */
             /* ========================================================================= */
-            <div className="relative z-10 w-full animate-fade-in">
-              {/* Atmospheric background with faded edges */}
-              <div className="absolute inset-x-0 top-0 h-[340px] overflow-hidden pointer-events-none">
+            <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
+              {/* BACKGROUND IMAGE (Top Right - Desktop) */}
+              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
                 <img
-                  src="/brand/cover_geminis_conexion.png"
+                  src="/brand/bg-conexion.png"
                   alt=""
-                  className="w-full h-full object-cover object-center opacity-40 scale-110 blur-sm"
+                  className="w-full h-full object-cover object-center opacity-90"
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/70 via-zinc-950/50 to-zinc-950" />
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-transparent to-zinc-950" />
               </div>
 
-              <div className="relative max-w-3xl mx-auto px-4 md:px-8 pt-14 md:pt-20 pb-44 space-y-10">
+              {/* Sticky Header back button */}
+              <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
+                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
+                  <button
+                    onClick={() => updateUrl(null, null)}
+                    className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-zinc-400 text-xs font-semibold">Volver al inicio</span>
+                </div>
+              </div>
+
+              {/* Header section with logo */}
+              <div className="relative max-w-[1400px] w-full mx-auto px-4 md:px-12 lg:px-16 xl:px-20 pt-10 pb-12 space-y-12 z-10">
                 <div className="flex flex-col items-center text-center space-y-6">
                   <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-14 w-auto drop-shadow-lg" />
                   <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sobre conexión</span>
-                  <p className="text-zinc-300 text-base md:text-lg leading-relaxed max-w-2xl">
-                    conexión es una banda de rock alternativo en español. Este es su espacio
-                    oficial de escucha: toda su discografía, letras y lanzamientos en un solo lugar.
+                  <p className="text-zinc-300 text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
+                    Conexión es un proyecto grunge/post-grunge nacido desde el caos mental, la ansiedad y la necesidad de convertir heridas en canciones. Durante la pandemia en Chile, el músico volvió a componer y se reencontró con letras antiguas escritas cuando era un niño confundido, perturbado y sin entender lo que le pasaba. Desde entonces, ha ido depurando canciones nuevas y viejas, conectando historias, símbolos y mensajes ocultos entre discos conceptuales que, pieza por pieza, construyen una gran narrativa de dolor, desgaste, despertar y renacimiento.
                   </p>
                 </div>
 
-                {/* Discography timeline */}
-                <div className="space-y-4">
-                  <h2 className="text-xl font-bold text-white tracking-wide border-b border-zinc-900 pb-3">Discografía</h2>
-                  <div className="space-y-3">
-                    {albums.map((album) => (
-                      <div
-                        key={album.id}
-                        onClick={() => {
-                          if (!album.disabled) {
-                            setIsAboutOpen(false);
-                            updateUrl(album.id, null);
-                          }
-                        }}
-                        className={`flex items-center gap-4 p-3 rounded-xl border border-zinc-900 bg-zinc-950/60 transition-colors ${album.disabled ? 'opacity-60' : 'hover:bg-zinc-900/50 cursor-pointer'}`}
-                      >
-                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                          {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.coverImage)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-bold text-white text-sm truncate">{album.title} <span className="text-zinc-500 font-normal">• {album.year}</span></h3>
-                          <p className="text-zinc-400 text-xs mt-1 line-clamp-2 leading-relaxed">{album.description}</p>
-                        </div>
+
+              </div>
+
+              {/* Albums blocks */}
+              <div className="w-full flex flex-col gap-24 pb-44 z-10">
+                {albums.map(album => (
+                  <div key={album.id} className="w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative flex flex-col lg:flex-row gap-8 lg:gap-16">
+                    {/* Left Column: Big Cover and Info */}
+                    <div className="w-full lg:w-[320px] xl:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
+                      <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-[300px] lg:h-[300px] xl:w-[380px] xl:h-[380px] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
+                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.coverImage)}
+                      </div>
+
+                      <div className="space-y-2 w-full">
+                        <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">{album.year}</span>
+                        <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight">{album.title}</h2>
                         {album.disabled && (
-                          <span className="bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
+                          <span className="inline-block mt-2 bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
                         )}
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Right Column: Full Description */}
+                    <div className="flex-1 w-full space-y-6">
+                      <div className="border-b border-zinc-800 pb-4">
+                        <h3 className="text-2xl font-bold text-white">Historia del Álbum</h3>
+                      </div>
+
+                      <div className="text-zinc-300 text-md md:text-md font-medium leading-loose tracking-wide font-sans select-text max-w-2xl py-2 space-y-4">
+                        {(() => {
+                          if (album.id === "cero") {
+                            return (
+                              <>
+                                <p><strong>Cero</strong> es el punto de partida. El disco donde todo comienza desde la herida, desde la frustración acumulada y desde una infancia marcada por sensaciones que todavía pesan.</p>
+                                <p>Es un álbum de dolor, desgaste y memoria emocional. Suena como volver a mirar hacia atrás y encontrar habitaciones cerradas, voces antiguas, rabia guardada y una tristeza que nunca terminó de irse. Aquí el grunge aparece más crudo, más directo, más roto.</p>
+                                <p>Conceptualmente, <strong>Cero</strong> representa el origen: ese lugar donde nacen las grietas, donde la inocencia se mezcla con la frustración y donde el personaje todavía no entiende del todo qué le pasó, pero ya siente que algo dentro de él quedó dañado.</p>
+                                <p>No es un disco sobre sanar. Es un disco sobre reconocer la herida.</p>
+                              </>
+                            );
+                          }
+                          if (album.id === "doble-cero") {
+                            return (
+                              <>
+                                <p><strong>Doble Cero</strong> continúa el desgaste, pero desde una versión más adulta, más consciente y más pesada. Si <strong>Cero</strong> mira hacia la niñez y el origen del dolor, <strong>Doble Cero</strong> observa lo que queda después: una persona más grande, más cansada, más golpeada por la vida, pero todavía de pie.</p>
+                                <p>El disco mantiene la frustración, el dolor y la suciedad emocional del grunge, pero con una mirada más madura. Ya no se trata solo de no entender lo que duele, sino de convivir con eso. De cargarlo. De repetir ciclos. De sentir que ciertas heridas crecieron junto con el cuerpo.</p>
+                                <p><strong>Doble Cero</strong> habla de la acumulación: más años, más peso, más ruido mental, más preguntas sin respuesta. Es el reflejo de alguien que ya no es un niño, pero que todavía arrastra las ruinas de lo que fue.</p>
+                                <p>Conceptualmente, es una segunda caída. O quizá la misma caída, pero vista desde otro ángulo.</p>
+                              </>
+                            );
+                          }
+                          if (album.id === "geminis" || album.title.toLowerCase() === "géminis") {
+                            return (
+                              <>
+                                <p><strong>Géminis</strong> es el despertar. Un disco más onírico, astral y abstracto, donde la mente comienza a partirse en símbolos, visiones y revelaciones internas.</p>
+                                <p>Aquí Conexión se mueve entre lo real y lo invisible. Las canciones parecen venir de sueños raros, lecturas astrales, dobles internos y mensajes que aparecen cuando la conciencia empieza a abrirse. Es un disco de darse cuenta, de mirar alrededor y entender que algo no encaja.</p>
+                                <p>Pero <strong>Géminis</strong> no es solo contemplación: también es un golpe en la mesa. Es el grito de rebeldía después de años de silencio. Es el momento en que el personaje deja de observar su propio caos y decide ejecutarlo, enfrentarlo, usarlo como energía.</p>
+                                <p>Conceptualmente, <strong>Géminis</strong> representa la división y la revelación: dos caras, dos voces, dos versiones de una misma persona luchando por despertar. Es un disco de señales ocultas, rabia iluminada y ruptura interna.</p>
+                              </>
+                            );
+                          }
+                          if (album.id === "vertical" || album.title.toLowerCase() === "vertical") {
+                            return (
+                              <>
+                                <p><strong>Vertical</strong> es un renacer más psicológico, más terrenal y más físico. Después del dolor, del desgaste y del despertar, llega la ansiedad como una fuerza concreta: el cuerpo habla, la mente se acelera y la realidad se vuelve demasiado estrecha.</p>
+                                <p>Este disco baja el viaje astral de <strong>Géminis</strong> hacia una dimensión más humana. Aquí aparecen los síntomas, el vértigo, la presión en el pecho, la sensación de caída, el miedo a perder el control y esa lucha silenciosa contra uno mismo.</p>
+                                <p><strong>Vertical</strong> habla de estar de pie cuando todo por dentro quiere derrumbarse. Es un álbum sobre ansiedad, renacimiento y supervivencia mental. No desde una mirada heroica, sino desde una más real: la de alguien que intenta recomponerse mientras todavía tiembla.</p>
+                                <p>Conceptualmente, <strong>Vertical</strong> es la altura y el abismo al mismo tiempo. Es crecer, caer, respirar, volver a levantarse y aceptar que renacer también puede doler.</p>
+                              </>
+                            );
+                          }
+                          return <p>{album.description}</p>;
+                        })()}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             </div>
           ) : selectedAlbum === null ? (
