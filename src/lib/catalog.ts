@@ -113,16 +113,20 @@ export async function getLikes(): Promise<Record<string, number>> {
 }
 
 export async function incrementPlay(trackId: number): Promise<number> {
-  const { data: current } = await supabase.from("track_stats").select("plays").eq("track_id", trackId).single();
+  const { data: current, error: err1 } = await supabase.from("track_stats").select("plays").eq("track_id", trackId).single();
+  if (err1) console.error("incrementPlay select error:", err1);
   const next = (current?.plays || 0) + 1;
-  await supabase.from("track_stats").update({ plays: next }).eq("track_id", trackId);
+  const { error: err2 } = await supabase.from("track_stats").update({ plays: next }).eq("track_id", trackId);
+  if (err2) console.error("incrementPlay update error:", err2);
   return next;
 }
 
 export async function incrementLike(trackId: number): Promise<number> {
-  const { data: current } = await supabase.from("track_stats").select("likes").eq("track_id", trackId).single();
+  const { data: current, error: err1 } = await supabase.from("track_stats").select("likes").eq("track_id", trackId).single();
+  if (err1) console.error("incrementLike select error:", err1);
   const next = (current?.likes || 0) + 1;
-  await supabase.from("track_stats").update({ likes: next }).eq("track_id", trackId);
+  const { error: err2 } = await supabase.from("track_stats").update({ likes: next }).eq("track_id", trackId);
+  if (err2) console.error("incrementLike update error:", err2);
   return next;
 }
 

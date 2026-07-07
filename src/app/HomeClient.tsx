@@ -1,34 +1,40 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSecureAudio } from "@/hooks/useSecureAudio";
 import type { Album, Track, AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 import {
   Home as HomeIcon,
   Search,
-  Library,
   Play,
   Pause,
   SkipBack,
   SkipForward,
   Volume2,
   VolumeX,
-  Plus,
-  Download,
-  MoreHorizontal,
   ArrowLeft,
   Heart,
   Shuffle,
-  Repeat,
-  Laptop2,
   ChevronRight,
   Music,
-  Compass,
-  Radio,
+  Disc3,
+  Info,
   Clock
 } from "lucide-react";
 
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "");
+}
+
 export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [isLoaded, setIsLoaded] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
@@ -58,9 +64,50 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   }, []);
 
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithStats | null>(null);
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
   const mainRef = useRef<HTMLDivElement>(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<TrackWithStats | null>(null);
+
+  // Sync state from URL search params
+  useEffect(() => {
+    const albumId = searchParams.get("album");
+    const trackSlug = searchParams.get("track");
+
+    if (albumId) {
+      const album = albums.find((a) => a.id === albumId);
+      if (album) {
+        setSelectedAlbum(album);
+        if (trackSlug) {
+          const track = album.tracks.find((t) => slugify(t.title) === trackSlug);
+          if (track) {
+            setSelectedTrackForLyrics(track);
+          } else {
+            setSelectedTrackForLyrics(null);
+          }
+        } else {
+          setSelectedTrackForLyrics(null);
+        }
+      } else {
+        setSelectedAlbum(null);
+        setSelectedTrackForLyrics(null);
+      }
+    } else {
+      setSelectedAlbum(null);
+      setSelectedTrackForLyrics(null);
+    }
+  }, [searchParams, albums]);
+
+  // Update URL helper
+  const updateUrl = useCallback(
+    (albumId: string | null, trackTitle: string | null) => {
+      const params = new URLSearchParams();
+      if (albumId) params.set("album", albumId);
+      if (trackTitle) params.set("track", slugify(trackTitle));
+      router.push(`?${params.toString()}`, { scroll: false });
+    },
+    [router]
+  );
 
   // State for optimistic like updates
   const [localLikes, setLocalLikes] = useState<Record<number, number>>({});
@@ -84,14 +131,14 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
     }
   };
 
-  // Reset scroll to top when selecting an album or song lyrics
+  // Reset scroll to top when changing view (album, lyrics, about)
   useEffect(() => {
     if (mainRef.current) {
       mainRef.current.scrollTop = 0;
     }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowStickyHeader(false);
-  }, [selectedAlbum, selectedTrackForLyrics]);
+  }, [selectedAlbum, selectedTrackForLyrics, isAboutOpen]);
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const scrollTop = e.currentTarget.scrollTop;
@@ -141,8 +188,9 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const handleSelectSongFromSearch = (track: TrackWithStats) => {
     const album = albums.find(a => a.tracks.some(t => t.id === track.id));
     if (album) {
-      const trackIndex = album.tracks.findIndex(t => t.id === track.id);
-      setSelectedAlbum(album);
+      const trackIndex = album.tracks.findIndex((t) => t.id === track.id);
+      updateUrl(album.id, null);
+      setIsAboutOpen(false);
       setCurrentPlaylist(album.tracks);
       setCurrentTrackIndex(trackIndex);
       setIsPlaying(true);
@@ -247,7 +295,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const handleTrackSelectInAlbum = (albumTracks: TrackWithStats[], index: number) => {
     const selectedTrack = albumTracks[index];
     const isThisTrackActive = currentTrack && currentTrack.id === selectedTrack.id;
-    
+
     if (isThisTrackActive) {
       setIsPlaying(!isPlaying);
     } else {
@@ -265,10 +313,67 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
     setIsPlaying(true);
   };
 
+  // Navegación principal (barra inferior)
+  const goHome = () => {
+    updateUrl(null, null);
+    setIsAboutOpen(false);
+  };
+
+  const openAbout = () => {
+    setSelectedTrackForLyrics(null);
+    setIsAboutOpen(true);
+  };
+
+  const isHomeActive = !isAboutOpen && selectedAlbum === null && selectedTrackForLyrics === null;
+
+  // Estadísticas del catálogo (solo discos habilitados suenan, pero se cuentan todos)
+  const enabledAlbums = albums.filter((a) => !a.disabled);
+  const totalAlbums = albums.length;
+  const totalTracks = albums.reduce((n, a) => n + a.tracks.length, 0);
+  const totalMinutes = Math.round(
+    albums.reduce((sum, a) => sum + a.tracks.reduce((s, t) => s + t.duration, 0), 0) / 60
+  );
+
+  const playRandomSong = () => {
+    const pool = enabledAlbums.flatMap((a) => a.tracks.map((t) => ({ album: a, track: t })));
+    if (pool.length === 0) return;
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    const trackIndex = pick.album.tracks.findIndex((t) => t.id === pick.track.id);
+    updateUrl(pick.album.id, null);
+    setCurrentPlaylist(pick.album.tracks);
+    setCurrentTrackIndex(trackIndex);
+    setCurrentTime(0);
+    setIsPlaying(true);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
+  };
+
+  // Carrusel de discos: arrastre con el mouse (el táctil usa scroll nativo).
+  // `moved` evita que el click abra un disco justo al terminar de arrastrar.
+  const discosRef = useRef<HTMLDivElement>(null);
+  const drag = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
+
+  const handleDiscosDown = (e: React.MouseEvent) => {
+    const el = discosRef.current;
+    if (!el) return;
+    drag.current = { isDown: true, startX: e.pageX, scrollLeft: el.scrollLeft, moved: false };
+  };
+
+  const handleDiscosMove = (e: React.MouseEvent) => {
+    const el = discosRef.current;
+    if (!el || !drag.current.isDown) return;
+    e.preventDefault();
+    const dx = e.pageX - drag.current.startX;
+    if (Math.abs(dx) > 5) drag.current.moved = true;
+    el.scrollLeft = drag.current.scrollLeft - dx;
+  };
+
+  const handleDiscosUp = () => {
+    drag.current.isDown = false;
   };
 
   // Helper to draw geometric/gradient album art using CSS or load image
@@ -340,154 +445,21 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
       <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans select-none">
 
-        {/* LEFT SIDEBAR & PLAYER AREA */}
-        <aside className="w-72 lg:w-80 hidden md:flex flex-col justify-between bg-zinc-950 border-r border-zinc-900 shrink-0">
-
-          {/* Navigation Section */}
-          <div className="p-6 space-y-6">
-            <div className="flex items-center gap-2">
-              <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-8 w-auto" />
-            </div>
-
-            {/* Navigation Links */}
-            <nav className="space-y-4">
-              <button
-                onClick={() => setSelectedAlbum(null)}
-                className={`flex items-center gap-4 w-full text-left transition-colors font-semibold cursor-pointer ${selectedAlbum === null ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
-              >
-                <HomeIcon className="w-6 h-6" />
-                <span>Inicio</span>
-              </button>
-              <button
-                onClick={() => setIsSearchOpen(true)}
-                className="flex items-center gap-4 text-zinc-400 hover:text-white transition-colors font-semibold cursor-pointer w-full text-left bg-transparent border-0"
-              >
-                <Search className="w-6 h-6" />
-                <span>Buscar</span>
-              </button>
-            </nav>
-          </div>
-
-          {/* INTEGRATED PLAYER PANEL */}
-          {currentTrack && (
-            <div className="p-6 bg-zinc-950 border-t border-zinc-900 space-y-5">
-
-              {/* Active Album Cover & Metadata */}
-              <div className="space-y-4">
-                <div className="w-full aspect-square rounded-lg overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                  {renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage)}
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div className="truncate pr-4">
-                    <h4 className="font-bold text-white text-base leading-tight hover:underline cursor-pointer truncate">
-                      {currentTrack.title}
-                    </h4>
-                    <p className="text-zinc-400 text-xs hover:underline cursor-pointer truncate mt-0.5">
-                      {currentTrack.artist}
-                    </p>
-                  </div>
-                  <button className="text-zinc-400 hover:text-white cursor-pointer shrink-0">
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Progress Slider */}
-              <div className="space-y-2">
-                <div className="relative group">
-                  <div
-                    onClick={handleSeek}
-                    className="w-full bg-zinc-800 h-1 rounded-full overflow-hidden cursor-pointer"
-                  >
-                    <div
-                      className="bg-zinc-100 hover:bg-emerald-500 h-full transition-all duration-300 pointer-events-none"
-                      style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between text-[10px] text-zinc-400 font-mono">
-                  <span>{formatTime(displayTime)}</span>
-                  <span>-{formatTime(Math.max(0, displayDuration - displayTime))}</span>
-                </div>
-              </div>
-
-              {/* Playback controls */}
-              <div className="flex items-center justify-center gap-5">
-                <button
-                  onClick={handlePrev}
-                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <SkipBack className="w-5 h-5 fill-current" />
-                </button>
-
-                <button
-                  onClick={handlePlayPause}
-                  className="w-10 h-10 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-all shadow shadow-white/10 cursor-pointer"
-                >
-                  {isPlaying ? (
-                    <Pause className="w-4 h-4 fill-current text-black" />
-                  ) : (
-                    <Play className="w-4 h-4 text-black" />
-                  )}
-                </button>
-
-                <button
-                  onClick={handleNext}
-                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  <SkipForward className="w-5 h-5 fill-current" />
-                </button>
-              </div>
-
-              {/* Device & Volume actions */}
-              <div className="flex items-center justify-between text-zinc-400 text-xs pt-1">
-                <button className="hover:text-white cursor-pointer">
-                  <Laptop2 className="w-3.5 h-3.5" />
-                </button>
-
-                <div className="flex items-center gap-2 w-24">
-                  <button
-                    onClick={() => setIsMuted(!isMuted)}
-                    className="hover:text-white cursor-pointer shrink-0"
-                  >
-                    {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-                  </button>
-                  <input
-                    type="range"
-                    min="0"
-                    max="100"
-                    value={isMuted ? 0 : volume}
-                    onChange={(e) => {
-                      setVolume(Number(e.target.value));
-                      if (isMuted) setIsMuted(false);
-                    }}
-                    className="w-full accent-zinc-100 bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
-                  />
-                </div>
-              </div>
-
-            </div>
-          )}
-        </aside>
-
-        {/* RIGHT MAIN CONTENT AREA */}
+        {/* MAIN CONTENT AREA (full width, Netflix-style) */}
         <main
           ref={mainRef}
           onScroll={handleScroll}
-          className="flex-1 flex flex-col bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950 overflow-y-auto relative"
+          className="flex-1 flex flex-col bg-zinc-950 overflow-y-auto relative"
         >
 
-          {/* Glow Effects */}
-          <div className="absolute top-0 right-0 w-[450px] h-[350px] bg-gradient-to-bl from-emerald-600/10 to-transparent blur-[120px] pointer-events-none" />
 
           {selectedTrackForLyrics !== null ? (
             /* ========================================================================= */
             /* SONG LYRICS VIEW                                                          */
             /* ========================================================================= */
             <div className="flex flex-col w-full min-h-full relative animate-fade-in">
-              {/* Blurred Atmospheric Background */}
-              <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              {/* Blurred Atmospheric Background (Mobile) */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 md:hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950 z-10" />
                 {selectedTrackForLyrics.coverImage && (
                   <div
@@ -497,11 +469,20 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                 )}
               </div>
 
+              {/* BACKGROUND IMAGE (Top Right - Desktop) */}
+              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
+                <img
+                  src="/brand/bg-conexion.png"
+                  alt=""
+                  className="w-full h-full object-cover object-center opacity-90"
+                />
+              </div>
+
               {/* Sticky Header back button */}
-              <div className="sticky top-0 z-30 py-3 px-4 md:px-8 lg:px-12 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-20">
-                <div className="max-w-[1400px] mx-auto w-full flex items-center gap-4">
+              <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
+                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 flex items-center gap-4">
                   <button
-                    onClick={() => setSelectedTrackForLyrics(null)}
+                    onClick={() => updateUrl(selectedAlbum?.id || null, null)}
                     className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -511,7 +492,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
               </div>
 
               {/* Main Content Layout */}
-              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 py-8 relative z-20 flex flex-col lg:flex-row gap-8 lg:gap-16 pb-36">
+              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 py-8 relative z-20 flex flex-col lg:flex-row gap-8 lg:gap-16 pb-44">
 
                 {/* Left Column: Big Cover and Info */}
                 <div className="w-full lg:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
@@ -568,7 +549,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                   </div>
 
                   {/* Scrolling lyrics area */}
-                  <div className="text-zinc-300 text-lg md:text-xl font-medium leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-2xl py-2 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
+                  <div className="text-zinc-300 text-md md:text-md font-medium leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-2xl py-2 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
                     {(() => {
                       switch (selectedTrackForLyrics.title.toLowerCase()) {
                         case "papeles rotos":
@@ -589,6 +570,42 @@ El tiempo es un río que corre hacia atrás
 Papeles rotos que no vuelven más.`;
                         case "cero":
                           return `Empezar de nuevo desde la nada
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
 Cruzar el abismo con la mirada
 El pulso se apaga, la luz se enciende
 El frío del alma que nadie comprende.
@@ -642,50 +659,162 @@ Que viaja directo a tu dirección.`;
 
               </div>
             </div>
+          ) : isAboutOpen ? (
+            /* ========================================================================= */
+            /* ABOUT / SOBRE CONEXIÓN VIEW                                               */
+            /* ========================================================================= */
+            <div className="relative z-10 w-full animate-fade-in">
+              {/* Atmospheric background with faded edges */}
+              <div className="absolute inset-x-0 top-0 h-[340px] overflow-hidden pointer-events-none">
+                <img
+                  src="/brand/cover_geminis_conexion.png"
+                  alt=""
+                  className="w-full h-full object-cover object-center opacity-40 scale-110 blur-sm"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/70 via-zinc-950/50 to-zinc-950" />
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-transparent to-zinc-950" />
+              </div>
+
+              <div className="relative max-w-3xl mx-auto px-4 md:px-8 pt-14 md:pt-20 pb-44 space-y-10">
+                <div className="flex flex-col items-center text-center space-y-6">
+                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-16 w-auto drop-shadow-lg" />
+                  <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sobre conexión</span>
+                  <p className="text-zinc-300 text-base md:text-lg leading-relaxed max-w-2xl">
+                    conexión es una banda de rock alternativo en español. Este es su espacio
+                    oficial de escucha: toda su discografía, letras y lanzamientos en un solo lugar.
+                  </p>
+                </div>
+
+                {/* Discography timeline */}
+                <div className="space-y-4">
+                  <h2 className="text-xl font-bold text-white tracking-wide border-b border-zinc-900 pb-3">Discografía</h2>
+                  <div className="space-y-3">
+                    {albums.map((album) => (
+                      <div
+                        key={album.id}
+                        onClick={() => {
+                          if (!album.disabled) {
+                            setIsAboutOpen(false);
+                            updateUrl(album.id, null);
+                          }
+                        }}
+                        className={`flex items-center gap-4 p-3 rounded-xl border border-zinc-900 bg-zinc-950/60 transition-colors ${album.disabled ? 'opacity-60' : 'hover:bg-zinc-900/50 cursor-pointer'}`}
+                      >
+                        <div className="w-14 h-14 rounded-lg overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
+                          {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.coverImage)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-white text-sm truncate">{album.title} <span className="text-zinc-500 font-normal">• {album.year}</span></h3>
+                          <p className="text-zinc-400 text-xs mt-1 line-clamp-2 leading-relaxed">{album.description}</p>
+                        </div>
+                        {album.disabled && (
+                          <span className="bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : selectedAlbum === null ? (
             /* ========================================================================= */
-            /* HOME PAGE VIEW                                                            */
+            /* HOME PAGE VIEW (Netflix-style hero + Discos row)                          */
             /* ========================================================================= */
-            <div className="p-4 md:p-8 lg:p-12 space-y-10 relative z-10 max-w-[1400px] mx-auto w-full pb-36 md:pb-12">
+            <div className="relative z-10 w-full pb-44">
 
-              {/* Top Bar / Greetings */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white animate-fade-in">{greeting}</h1>
-                  <p className="text-zinc-400 text-sm mt-1">Explora tu esfera musical personalizada.</p>
+              {/* BACKGROUND IMAGE (Top Right) */}
+              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10">
+                <img
+                  src="/brand/bg-conexion.png"
+                  alt=""
+                  className="w-full h-full object-cover object-center opacity-90"
+                />
+              </div>
+
+              {/* ===== NETFLIX-STYLE HERO ===== */}
+              <div className="relative w-full min-h-[300px] md:min-h-[350px] lg:min-h-[400px] flex items-center mb-8">
+
+                {/* CONTENT aligned LEFT */}
+                <div className="relative w-full max-w-[1400px] mx-auto px-4 md:px-8 lg:px-12 py-10 md:py-16">
+                  <div className="max-w-xl flex flex-col items-start text-left space-y-6 animate-fade-in">
+
+                    {/* Greeting + Logo */}
+                    <div className="space-y-1">
+                      <p className="text-zinc-400 text-sm md:text-base font-semibold tracking-wide drop-shadow-md">{greeting}</p>
+                      <img
+                        src="/brand/conexionlogo.svg"
+                        alt="Conexión"
+                        className="h-12 md:h-16 lg:h-20 w-auto drop-shadow-2xl"
+                      />
+                    </div>
+
+                    {/* Random Song Button */}
+                    <button
+                      onClick={playRandomSong}
+                      className="flex items-center gap-3 px-8 py-3 bg-[#FFC107] hover:bg-[#FFD54F] text-black font-bold rounded-full transition-all hover:scale-105 shadow-lg shadow-[#FFC107]/20 cursor-pointer"
+                    >
+                      <Shuffle className="w-5 h-5" />
+                      <span>Canción aleatoria</span>
+                    </button>
+
+                    {/* Stats */}
+                    <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-zinc-400 pt-2 font-medium">
+                      <span className="flex items-center gap-1.5">
+                        <Disc3 className="w-4 h-4 text-zinc-500" />
+                        <span className="text-zinc-200 font-bold">{totalAlbums}</span> discos
+                      </span>
+                      <span className="text-zinc-700">•</span>
+                      <span className="flex items-center gap-1.5">
+                        <Music className="w-4 h-4 text-zinc-500" />
+                        <span className="text-zinc-200 font-bold">{totalTracks}</span> canciones
+                      </span>
+                      <span className="text-zinc-700">•</span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-4 h-4 text-zinc-500" />
+                        <span className="text-zinc-200 font-bold">{totalMinutes}</span> min
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              {/* DISCOS ROW (horizontal scroll, Netflix-style) */}
+              <div className="relative max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 space-y-4">
 
-              {/* Recommended Albums Grid */}
-              <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
-                  <h2 className="text-xl font-bold text-white tracking-wide">Hecho para ti</h2>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1">
+                <div
+                  ref={discosRef}
+                  onMouseDown={handleDiscosDown}
+                  onMouseMove={handleDiscosMove}
+                  onMouseUp={handleDiscosUp}
+                  onMouseLeave={handleDiscosUp}
+                  className="flex gap-4 overflow-x-auto pt-4 pb-4 -mx-4 px-4 md:-mx-4 md:px-4 no-scrollbar cursor-grab active:cursor-grabbing select-none"
+                >
                   {albums.map((album) => (
                     <div
                       key={album.id}
-                      onClick={() => !album.disabled && setSelectedAlbum(album)}
-                      className={`p-4 rounded-xl transition-all duration-300 ${album.disabled
-                        ? "opacity-55 cursor-not-allowed bg-zinc-950/0"
-                        : "bg-zinc-950/0 hover:bg-zinc-900/50 group cursor-pointer"
+                      onClick={() => {
+                        if (drag.current.moved) return;
+                        if (!album.disabled) updateUrl(album.id, null);
+                      }}
+                      className={`w-[46%] sm:w-[38%] md:w-[30%] shrink-0 rounded-2xl transition-all duration-300 ${album.disabled
+                        ? "opacity-55 cursor-not-allowed"
+                        : "group cursor-pointer hover:-translate-y-1"
                         }`}
                     >
-                      <div className="w-full aspect-square rounded-lg overflow-hidden bg-zinc-800 relative mb-4 flex items-center justify-center">
+                      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-zinc-800 relative mb-3 flex items-center justify-center shadow-lg shadow-black/40">
                         {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.coverImage)}
 
                         {album.disabled ? (
                           /* Pronto Overlay Badge */
                           <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center">
-                            <span className="bg-emerald-500/90 text-black text-xs font-black tracking-widest uppercase px-3 py-1 rounded shadow shadow-emerald-500/25">Pronto</span>
+                            <span className="bg-[#FFC107]/90 text-black text-xs font-black tracking-widest uppercase px-3 py-1 rounded shadow shadow-[#FFC107]/25">Pronto</span>
                           </div>
                         ) : (
                           /* Floating Play Icon */
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              if (drag.current.moved) return;
                               playEntireAlbum(album);
                             }}
                             className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-emerald-500 text-black flex items-center justify-center shadow-lg shadow-emerald-500/20 opacity-0 scale-75 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 hover:bg-emerald-400 cursor-pointer"
@@ -697,9 +826,6 @@ Que viaja directo a tu dirección.`;
 
                       <h3 className={`font-bold text-sm truncate ${album.disabled ? 'text-zinc-500' : 'text-white'}`}>{album.title}</h3>
                       <p className="text-zinc-500 text-xs mt-1 truncate">Por {album.artist} • {album.year}</p>
-                      <p className={`text-xs mt-2 line-clamp-2 leading-relaxed ${album.disabled ? 'text-zinc-600' : 'text-zinc-400'}`}>
-                        {album.description}
-                      </p>
                     </div>
                   ))}
                 </div>
@@ -710,17 +836,26 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             /* ALBUM DETAILS VIEW                                                        */
             /* ========================================================================= */
-            <div className="flex flex-col w-full">
+            <div className="relative z-10 flex flex-col w-full">
+
+              {/* BACKGROUND IMAGE (Top Right) */}
+              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10 hidden md:block">
+                <img
+                  src="/brand/bg-conexion.png"
+                  alt=""
+                  className="w-full h-full object-cover object-center opacity-90"
+                />
+              </div>
 
               {/* Sticky Header Controls & Summary Bar */}
-              <div className={`sticky top-0 z-30 py-3 px-4 md:px-8 lg:px-12 flex items-center justify-between w-full transition-colors -mb-16 md:mb-0 ${showStickyHeader
+              <div className={`sticky top-0 z-30 py-3 flex items-center justify-between w-full transition-colors -mb-16 md:mb-0 ${showStickyHeader
                 ? "bg-zinc-950/95 border-b border-zinc-900/60 backdrop-blur-md"
                 : "bg-transparent border-b border-transparent"
                 }`}>
-                <div className="max-w-[1400px] mx-auto w-full flex items-center justify-between">
+                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-8 lg:px-12 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <button
-                      onClick={() => setSelectedAlbum(null)}
+                      onClick={() => updateUrl(null, null)}
                       className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer"
                     >
                       <ArrowLeft className="w-5 h-5" />
@@ -748,7 +883,7 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-8 lg:px-12 pb-36 md:pb-12">
+              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-8 lg:px-12 pb-44">
 
                 {/* Album Hero Info */}
                 <div className="relative pt-0 lg:pt-3 pb-6 md:pb-8 flex flex-col lg:flex-row items-center lg:items-end gap-6 md:gap-8 z-10">
@@ -764,7 +899,7 @@ Que viaja directo a tu dirección.`;
                   </div>
 
                   {/* DESKTOP COVER */}
-                  <div className="hidden md:flex md:w-64 md:h-64 lg:w-56 lg:h-56 xl:w-64 xl:h-64 shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
+                  <div className="hidden md:flex md:w-28 md:h-28 lg:w-36 lg:h-36 xl:w-48 xl:h-48 shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
@@ -860,7 +995,7 @@ Que viaja directo a tu dirección.`;
 
                             {/* Duration, Like & Chevron */}
                             <div className="col-span-4 md:col-span-1 flex items-center justify-end gap-3 text-zinc-400 text-sm">
-                              <button 
+                              <button
                                 onClick={(e) => handleLike(e, track.id, track.likes)}
                                 className="flex items-center gap-1 hover:text-emerald-500 cursor-pointer rounded transition-colors text-zinc-500 hover:text-white"
                                 title="Me gusta"
@@ -872,7 +1007,7 @@ Que viaja directo a tu dirección.`;
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedTrackForLyrics(track);
+                                  updateUrl(selectedAlbum.id, track.title);
                                 }}
                                 className="p-1 hover:text-emerald-500 cursor-pointer rounded transition-colors text-zinc-500 hover:text-white"
                                 title="Ver letra"
@@ -895,40 +1030,107 @@ Que viaja directo a tu dirección.`;
 
         </main>
 
-        {/* MOBILE MINI PLAYER */}
+        {/* GLOBAL PLAYER BAR (full width, compact on mobile, full controls on desktop) */}
         {currentTrack && (
-          <div className="fixed bottom-16 left-2 right-2 h-14 bg-zinc-900/95 backdrop-blur-md border border-zinc-800 rounded-lg flex items-center justify-between px-3 z-50 md:hidden shadow-lg shadow-black/40">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                {renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage)}
+          <div className="fixed bottom-16 md:bottom-20 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 z-50 shadow-lg shadow-black/40">
+            <div className="flex items-center justify-between px-3 md:px-8 lg:px-12 h-14 md:h-[76px] gap-4 max-w-[1400px] mx-auto">
+
+              {/* Track info */}
+              <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none md:w-1/4">
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
+                  {renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage)}
+                </div>
+                <div className="truncate min-w-0">
+                  <span className="block font-bold text-xs md:text-sm truncate text-white">{currentTrack.title}</span>
+                  <span className="block text-zinc-400 text-[10px] md:text-xs truncate">{currentTrack.artist}</span>
+                </div>
               </div>
-              <div className="truncate min-w-0">
-                <span className="block font-bold text-xs truncate text-white">{currentTrack.title}</span>
-                <span className="block text-zinc-400 text-[10px] truncate">{currentTrack.artist}</span>
+
+              {/* Desktop: transport controls + seek bar */}
+              <div className="hidden md:flex flex-col items-center flex-1 gap-1.5 min-w-0">
+                <div className="flex items-center gap-5">
+                  <button
+                    onClick={handlePrev}
+                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <SkipBack className="w-4 h-4 fill-current" />
+                  </button>
+                  <button
+                    onClick={handlePlayPause}
+                    className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-all cursor-pointer"
+                  >
+                    {isPlaying ? (
+                      <Pause className="w-4 h-4 fill-current text-black" />
+                    ) : (
+                      <Play className="w-4 h-4 text-black" />
+                    )}
+                  </button>
+                  <button
+                    onClick={handleNext}
+                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <SkipForward className="w-4 h-4 fill-current" />
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 w-full max-w-md text-[10px] text-zinc-400 font-mono">
+                  <span>{formatTime(displayTime)}</span>
+                  <div
+                    onClick={handleSeek}
+                    className="flex-1 bg-zinc-800 h-1 rounded-full overflow-hidden cursor-pointer"
+                  >
+                    <div
+                      className="bg-zinc-100 h-full transition-all duration-300 pointer-events-none"
+                      style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
+                    />
+                  </div>
+                  <span>{formatTime(displayDuration)}</span>
+                </div>
+              </div>
+
+              {/* Desktop: volume */}
+              <div className="hidden md:flex items-center gap-2 w-1/4 justify-end text-zinc-400">
+                <button
+                  onClick={() => setIsMuted(!isMuted)}
+                  className="hover:text-white cursor-pointer shrink-0"
+                >
+                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => {
+                    setVolume(Number(e.target.value));
+                    if (isMuted) setIsMuted(false);
+                  }}
+                  className="w-24 accent-zinc-100 bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Mobile: compact controls */}
+              <div className="flex md:hidden items-center gap-3 shrink-0 pl-2">
+                <button
+                  onClick={handlePlayPause}
+                  className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
+                >
+                  {isPlaying ? (
+                    <Pause className="w-3 h-3 fill-current text-black" />
+                  ) : (
+                    <Play className="w-3 h-3 text-black" />
+                  )}
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  <SkipForward className="w-4 h-4 fill-current" />
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0 pl-2">
-              <button
-                onClick={handlePlayPause}
-                className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
-              >
-                {isPlaying ? (
-                  <Pause className="w-3 h-3 fill-current text-black" />
-                ) : (
-                  <Play className="w-3 h-3 text-black" />
-                )}
-              </button>
-              <button
-                onClick={handleNext}
-                className="text-zinc-400 hover:text-white cursor-pointer"
-              >
-                <SkipForward className="w-4 h-4 fill-current" />
-              </button>
-            </div>
-
-            {/* Progress bar at the top of the mobile mini-player */}
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-800 rounded-t-lg overflow-hidden">
+            {/* Mobile: progress bar at the top of the player */}
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-800 overflow-hidden md:hidden">
               <div
                 className="bg-emerald-500 h-full transition-all duration-300"
                 style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
@@ -937,21 +1139,28 @@ Que viaja directo a tu dirección.`;
           </div>
         )}
 
-        {/* MOBILE BOTTOM NAVIGATION BAR */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around items-center z-50 md:hidden">
+        {/* BOTTOM NAVIGATION BAR (all screen sizes, per wireframe) */}
+        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-24 items-center z-50">
           <button
-            onClick={() => setSelectedAlbum(null)}
-            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${selectedAlbum === null ? 'text-emerald-400' : 'text-zinc-400 hover:text-white'}`}
+            onClick={goHome}
+            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isHomeActive ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
           >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Inicio</span>
+            <HomeIcon className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-[10px] md:text-[15px] font-medium">Inicio</span>
           </button>
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white cursor-pointer transition-colors bg-transparent border-0"
+            className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-zinc-400 hover:text-white cursor-pointer transition-colors bg-transparent border-0"
           >
-            <Search className="w-5 h-5" />
-            <span className="text-[10px] font-medium">Buscar</span>
+            <Search className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-[10px] md:text-[15px] font-medium">Buscar</span>
+          </button>
+          <button
+            onClick={openAbout}
+            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isAboutOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+          >
+            <Info className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-[10px] md:text-[15px] font-medium">Sobre conexión</span>
           </button>
         </nav>
 

@@ -86,7 +86,6 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 font-sans">
-      <div className="absolute top-0 right-0 w-[450px] h-[350px] bg-gradient-to-bl from-emerald-600/10 to-transparent blur-[120px] pointer-events-none" />
       <form
         onSubmit={submit}
         className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl space-y-6"
@@ -113,9 +112,8 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Clave de acceso"
-              className={`w-full bg-zinc-950 border ${
-                error ? "border-red-500/70" : "border-zinc-700"
-              } text-white placeholder-zinc-500 rounded-lg px-4 py-2.5 pl-10 text-sm focus:outline-none focus:border-emerald-500 transition-colors`}
+              className={`w-full bg-zinc-950 border ${error ? "border-red-500/70" : "border-zinc-700"
+                } text-white placeholder-zinc-500 rounded-lg px-4 py-2.5 pl-10 text-sm focus:outline-none focus:border-emerald-500 transition-colors`}
             />
           </div>
           {error && (
@@ -183,9 +181,8 @@ function Dashboard({
               <button
                 key={album.id}
                 onClick={() => setSelectedId(album.id)}
-                className={`flex items-center gap-3 w-full text-left px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                  active ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
-                }`}
+                className={`flex items-center gap-3 w-full text-left px-3 py-2 rounded-lg transition-colors cursor-pointer ${active ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
+                  }`}
               >
                 {album.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -223,7 +220,7 @@ function Dashboard({
       </aside>
 
       {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950">
+      <main className="flex-1 overflow-y-auto bg-zinc-950">
         <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-8">
           {/* Encabezado global */}
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -360,11 +357,10 @@ function AlbumEditor({
         <button
           onClick={save}
           disabled={!dirty || saving}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer ${
-            dirty && !saving
-              ? "bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.02] shadow-lg shadow-emerald-500/25"
-              : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-          }`}
+          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer ${dirty && !saving
+            ? "bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.02] shadow-lg shadow-emerald-500/25"
+            : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+            }`}
         >
           {saving ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -406,13 +402,12 @@ function AlbumEditor({
                 setDragIndex(null);
                 setOverIndex(null);
               }}
-              className={`grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-4 px-3 py-2.5 rounded-lg border transition-all ${
-                isDragging
-                  ? "opacity-40 border-emerald-500/50 bg-zinc-900"
-                  : isOver
+              className={`grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
+                ? "opacity-40 border-emerald-500/50 bg-zinc-900"
+                : isOver
                   ? "border-emerald-500 bg-zinc-900/80"
                   : "border-transparent hover:bg-zinc-900/40"
-              }`}
+                }`}
             >
               {/* Manija de arrastre */}
               <button
