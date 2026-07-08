@@ -1,143 +1,78 @@
 import "server-only";
-import { supabase } from "./supabase";
-import type { Album, AlbumWithStats, Track } from "./catalog-types";
+import { convex } from "./convex";
+import { api } from "../../convex/_generated/api";
+import type { Album, AlbumWithStats } from "./catalog-types";
 import { SEED_ALBUMS } from "./seed";
 
-// Inicializa la base de datos de Supabase si está vacía
+// Siembra la base de Convex si está vacía (la mutación no hace nada si ya hay datos).
 export async function seedDatabase() {
-  const { count } = await supabase.from("albums").select("*", { count: "exact", head: true });
-  if (count && count > 0) return;
-
-  for (const album of SEED_ALBUMS) {
-    await supabase.from("albums").insert({
-      id: album.id,
-      title: album.title,
-      artist: album.artist,
-      description: album.description,
-      creator: album.creator,
-      tracks_count: album.tracksCount,
-      duration_text: album.durationText,
-      cover_gradient: album.coverGradient,
-      cover_art_design: album.coverArtDesign,
-      cover_image: album.coverImage,
-      year: album.year,
-      disabled: album.disabled ?? false,
-    });
-
-    const tracks = album.tracks.map((t, index) => ({
-      id: t.id,
-      album_id: album.id,
-      title: t.title,
-      artist: t.artist,
-      album: t.album,
-      duration: t.duration,
-      cover_gradient: t.coverGradient,
-      cover_art_design: t.coverArtDesign,
-      cover_image: t.coverImage,
-      sort_order: index,
-    }));
-    await supabase.from("tracks").insert(tracks);
-
-    const trackStats = album.tracks.map(t => ({
-      track_id: t.id,
-      plays: 0,
-      likes: 0
-    }));
-    await supabase.from("track_stats").insert(trackStats);
+  try {
+    await convex.mutation(api.seed.seedIfEmpty, { albums: SEED_ALBUMS });
+  } catch (error) {
+    console.error("Error seeding Convex database:", error);
   }
 }
 
 export async function getCatalog(): Promise<Album[]> {
   await seedDatabase();
-
-  const { data: albumsData, error } = await supabase
-    .from("albums")
-    .select("*, tracks(*)")
-    .order("created_at", { ascending: true });
-
-  if (error || !albumsData) {
-    console.error("Error fetching catalog from Supabase:", error);
+  try {
+    const albums = await convex.query(api.catalog.getCatalog, {});
+    return albums as unknown as Album[];
+  } catch (error) {
+    console.error("Error fetching catalog from Convex:", error);
     return [];
   }
+}
 
-  return albumsData.map((a: any) => {
-    const sortedTracks = (a.tracks || []).sort((t1: any, t2: any) => t1.sort_order - t2.sort_order);
-
-    return {
-      id: a.id,
-      title: a.title,
-      artist: a.artist,
-      description: a.description,
-      creator: a.creator,
-      tracksCount: a.tracks_count,
-      durationText: a.duration_text,
-      coverGradient: a.cover_gradient,
-      coverArtDesign: a.cover_art_design,
-      coverImage: a.cover_image,
-      year: a.year,
-      disabled: a.disabled,
-      tracks: sortedTracks.map((t: any) => ({
-        id: t.id,
-        title: t.title,
-        artist: t.artist,
-        album: t.album,
-        duration: t.duration,
-        coverGradient: t.cover_gradient,
-        coverArtDesign: t.cover_art_design,
-        coverImage: t.cover_image,
-      }))
-    };
-  });
+async function getStats(): Promise<{ plays: Record<string, number>; likes: Record<string, number> }> {
+  const plays: Record<string, number> = {};
+  const likes: Record<string, number> = {};
+  try {
+    const stats = await convex.query(api.catalog.getStats, {});
+    for (const s of stats) {
+      plays[s.trackId] = s.plays;
+      likes[s.trackId] = s.likes;
+    }
+  } catch (error) {
+    console.error("Error fetching stats from Convex:", error);
+  }
+  return { plays, likes };
 }
 
 export async function getPlays(): Promise<Record<string, number>> {
-  const { data } = await supabase.from("track_stats").select("track_id, plays");
-  const plays: Record<string, number> = {};
-  if (data) {
-    data.forEach(d => {
-      plays[d.track_id] = d.plays;
-    });
-  }
-  return plays;
+  return (await getStats()).plays;
 }
 
 export async function getLikes(): Promise<Record<string, number>> {
-  const { data } = await supabase.from("track_stats").select("track_id, likes");
-  const likes: Record<string, number> = {};
-  if (data) {
-    data.forEach(d => {
-      likes[d.track_id] = d.likes;
-    });
-  }
-  return likes;
+  return (await getStats()).likes;
 }
 
 export async function incrementPlay(trackId: number): Promise<number> {
-  const { data: current, error: err1 } = await supabase.from("track_stats").select("plays").eq("track_id", trackId).single();
-  if (err1) console.error("incrementPlay select error:", err1);
-  const next = (current?.plays || 0) + 1;
-  const { error: err2 } = await supabase.from("track_stats").update({ plays: next }).eq("track_id", trackId);
-  if (err2) console.error("incrementPlay update error:", err2);
-  return next;
+  try {
+    return await convex.mutation(api.catalog.incrementPlay, { trackId });
+  } catch (error) {
+    console.error("incrementPlay error:", error);
+    return 0;
+  }
 }
 
 export async function incrementLike(trackId: number): Promise<number> {
-  const { data: current, error: err1 } = await supabase.from("track_stats").select("likes").eq("track_id", trackId).single();
-  if (err1) console.error("incrementLike select error:", err1);
-  const next = (current?.likes || 0) + 1;
-  const { error: err2 } = await supabase.from("track_stats").update({ likes: next }).eq("track_id", trackId);
-  if (err2) console.error("incrementLike update error:", err2);
-  return next;
+  try {
+    return await convex.mutation(api.catalog.incrementLike, { trackId });
+  } catch (error) {
+    console.error("incrementLike error:", error);
+    return 0;
+  }
 }
 
 export async function getCatalogWithStats(): Promise<AlbumWithStats[]> {
-  const [albums, plays, likes] = await Promise.all([getCatalog(), getPlays(), getLikes()]);
+  const [albums, stats] = await Promise.all([getCatalog(), getStats()]);
   return albums.map((album) => ({
     ...album,
     tracks: album.tracks.map((t) => ({
       ...t,
-      plays: plays[t.id] ?? 0,
-      likes: likes[t.id] ?? 0
+      plays: stats.plays[t.id] ?? 0,
+      likes: stats.likes[t.id] ?? 0,
     })),
   }));
 }
@@ -146,17 +81,20 @@ export async function reorderAlbumTracks(
   albumId: string,
   orderedTrackIds: number[]
 ): Promise<{ ok: boolean; error?: string }> {
-  for (let i = 0; i < orderedTrackIds.length; i++) {
-    await supabase.from("tracks").update({ sort_order: i }).eq("id", orderedTrackIds[i]);
+  try {
+    return await convex.mutation(api.catalog.reorderTracks, { orderedTrackIds });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
-  return { ok: true };
 }
 
 export async function toggleAlbumStatus(
   albumId: string,
   disabled: boolean
 ): Promise<{ ok: boolean; error?: string }> {
-  const { error } = await supabase.from("albums").update({ disabled }).eq("id", albumId);
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  try {
+    return await convex.mutation(api.catalog.toggleAlbumStatus, { albumId, disabled });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
 }

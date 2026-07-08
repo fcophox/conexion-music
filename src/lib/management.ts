@@ -19,17 +19,13 @@ function sign(payload: string): string {
   return createHmac("sha256", secret()).update(payload).digest("hex");
 }
 
-import { supabase } from "./supabase";
+import { convex } from "./convex";
+import { api } from "../../convex/_generated/api";
 
+// La comparación ocurre dentro de Convex; el valor de la contraseña nunca
+// sale de la base (no hay query pública que lea `settings`).
 export async function checkPassword(password: string): Promise<boolean> {
-  const { data } = await supabase.from("settings").select("value").eq("id", "MANAGEMENT_PASSWORD").single();
-  const expected = data?.value;
-  
-  if (!expected) throw new Error("MANAGEMENT_PASSWORD no encontrado en Supabase settings");
-  const a = Buffer.from(password);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
+  return convex.query(api.settings.verifyManagementPassword, { password });
 }
 
 // Token de sesión: expiración + firma. No guarda estado en servidor.
