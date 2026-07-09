@@ -32,8 +32,17 @@ function slugify(text: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
+// Carrusel del fondo por defecto del home: rota estas imágenes cada
+// SLIDE_INTERVAL_MS y se pausa mientras un disco está en hover o abierto.
+const SLIDES = [
+  '/brand/slides/bg-conexion-slider-1.png',
+  '/brand/slides/bg-conexion-slider-2.png',
+  '/brand/slides/bg-conexion-slider-3.png',
+];
+const SLIDE_INTERVAL_MS = 6000;
+
 const BACKGROUNDS = [
-  '/brand/bg-conexion.png',
+  ...SLIDES,
   '/cd/bg-conexion-cover.png',
   '/cd/bg-conexio-cero.png',
   '/cd/bg-conexion-doblecero.png',
@@ -104,6 +113,20 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<TrackWithStats | null>(null);
   const [hoveredAlbumId, setHoveredAlbumId] = useState<string | null>(null);
 
+  // Carrusel del fondo por defecto: avanza solo mientras ningún disco está en
+  // hover ni abierto; al pausarse conserva la slide actual y retoma desde ahí.
+  const [slideIndex, setSlideIndex] = useState(0);
+  const isCarouselActive = !hoveredAlbumId && !selectedAlbum;
+
+  useEffect(() => {
+    if (!isCarouselActive) return;
+    const id = setInterval(
+      () => setSlideIndex((i) => (i + 1) % SLIDES.length),
+      SLIDE_INTERVAL_MS
+    );
+    return () => clearInterval(id);
+  }, [isCarouselActive]);
+
   const currentBg = (() => {
     const targetId = hoveredAlbumId || (selectedAlbum ? selectedAlbum.id : null);
 
@@ -119,7 +142,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
       case 'doble-cero': return '/cd/bg-conexion-doblecero.png';
       case 'geminis': return '/cd/bg-conexion-geminis.png';
       case 'vertical': return '/cd/bg-conexion-vertical.png';
-      default: return '/brand/bg-conexion.png';
+      default: return SLIDES[slideIndex];
     }
   })();
 

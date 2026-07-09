@@ -115,3 +115,121 @@ export const toggleAlbumStatus = mutation({
     return { ok: true as const };
   },
 });
+
+export const moveTrackToAlbum = mutation({
+  args: { trackId: v.number(), targetAlbumId: v.string() },
+  handler: async (ctx, { trackId, targetAlbumId }) => {
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
+      .unique();
+    if (!track) return { ok: false as const, error: "Canción no encontrada" };
+
+    const targetAlbum = await ctx.db
+      .query("albums")
+      .withIndex("by_albumId", (q) => q.eq("albumId", targetAlbumId))
+      .unique();
+    if (!targetAlbum) return { ok: false as const, error: "Álbum destino no encontrado" };
+
+    const targetTracks = await ctx.db
+      .query("tracks")
+      .withIndex("by_albumId", (q) => q.eq("albumId", targetAlbumId))
+      .collect();
+    const maxSortOrder = targetTracks.length > 0
+      ? Math.max(...targetTracks.map((t) => t.sortOrder))
+      : 0;
+
+    await ctx.db.patch(track._id, {
+      albumId: targetAlbumId,
+      album: targetAlbum.title,
+      sortOrder: maxSortOrder + 1,
+    });
+
+    return { ok: true as const };
+  },
+});
+
+export const getNextTrackId = query({
+  args: {},
+  handler: async (ctx) => {
+    const tracks = await ctx.db.query("tracks").collect();
+    if (tracks.length === 0) return 101;
+    const maxId = Math.max(...tracks.map((t) => t.trackId));
+    return maxId + 1;
+  },
+});
+
+export const addTrack = mutation({
+  args: {
+    trackId: v.number(),
+    albumId: v.string(),
+    title: v.string(),
+    artist: v.string(),
+    album: v.string(),
+    duration: v.number(),
+    coverGradient: v.string(),
+    coverArtDesign: v.string(),
+    coverImage: v.optional(v.string()),
+    sortOrder: v.number(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.insert("tracks", {
+      trackId: args.trackId,
+      albumId: args.albumId,
+      title: args.title,
+      artist: args.artist,
+      album: args.album,
+      duration: args.duration,
+      coverGradient: args.coverGradient,
+      coverArtDesign: args.coverArtDesign,
+      coverImage: args.coverImage,
+      sortOrder: args.sortOrder,
+    });
+    await ctx.db.insert("trackStats", {
+      trackId: args.trackId,
+      plays: 0,
+      likes: 0,
+    });
+    return { ok: true as const, trackId: args.trackId };
+  },
+});
+
+export const renameTrack = mutation({
+  args: { trackId: v.number(), title: v.string() },
+  handler: async (ctx, { trackId, title }) => {
+    const clean = title.trim();
+    if (!clean || clean.length > 120) {
+      return { ok: false as const, error: "Título inválido (1–120 caracteres)" };
+    }
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
+      .unique();
+    if (!track) return { ok: false as const, error: "Canción no encontrada" };
+    await ctx.db.patch(track._id, { title: clean });
+    return { ok: true as const };
+  },
+});
+
+export const deleteAlbumTracks = mutation({
+  args: { albumId: v.string() },
+  handler: async (ctx, { albumId }) => {
+    const tracks = await ctx.db
+      .query("tracks")
+      .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+      .collect();
+
+    for (const track of tracks) {
+      // Borrar stats asociadas
+      const stat = await ctx.db
+        .query("trackStats")
+        .withIndex("by_trackId", (q) => q.eq("trackId", track.trackId))
+        .unique();
+      if (stat) await ctx.db.delete(stat._id);
+      // Borrar la pista
+      await ctx.db.delete(track._id);
+    }
+
+    return { ok: true as const, deleted: tracks.length };
+  },
+});

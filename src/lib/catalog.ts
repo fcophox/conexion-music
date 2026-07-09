@@ -98,3 +98,53 @@ export async function toggleAlbumStatus(
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+export async function moveTrackToAlbum(
+  trackId: number,
+  targetAlbumId: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.moveTrackToAlbum, { trackId, targetAlbumId });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function renameTrack(
+  trackId: number,
+  title: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.renameTrack, { trackId, title });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function getNextTrackId(): Promise<number> {
+  try {
+    return await convex.query(api.catalog.getNextTrackId, {});
+  } catch (error) {
+    console.error("getNextTrackId error:", error);
+    return 501; // fallback alto para no colisionar
+  }
+}
+
+export async function addTrack(track: {
+  trackId: number;
+  albumId: string;
+  title: string;
+  artist: string;
+  album: string;
+  duration: number;
+  coverGradient: string;
+  coverArtDesign: string;
+  coverImage?: string;
+  sortOrder: number;
+}): Promise<{ ok: boolean; trackId?: number; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.addTrack, track);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}

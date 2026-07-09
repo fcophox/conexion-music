@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Compass,
   GripVertical,
@@ -12,6 +12,12 @@ import {
   Loader2,
   BarChart3,
   Heart,
+  Upload,
+  Music,
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Pencil,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -153,6 +159,8 @@ function Dashboard({
   onReload: () => void;
 }) {
   const [selectedId, setSelectedId] = useState<string>(albums[0]?.id ?? "");
+  const [movingTrack, setMovingTrack] = useState(false);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const selected = albums.find((a) => a.id === selectedId) ?? albums[0];
 
   const logout = async () => {
@@ -186,13 +194,49 @@ function Dashboard({
           </p>
           {albums.map((album) => {
             const active = album.id === selectedId;
+            const isDropTarget = dropTargetId === album.id;
             return (
               <button
                 key={album.id}
                 onClick={() => setSelectedId(album.id)}
-                className={`flex items-center gap-3 w-full text-left px-3 py-2 rounded-lg transition-colors cursor-pointer ${active ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDropTargetId(album.id);
+                }}
+                onDragLeave={() => setDropTargetId(null)}
+                onDrop={async (e) => {
+                  e.preventDefault();
+                  try {
+                    const data = JSON.parse(e.dataTransfer.getData('application/json'));
+                    if (data && data.trackId && data.sourceAlbumId && data.sourceAlbumId !== album.id) {
+                      // Mantener dropTargetId durante el fetch para que el loader
+                      // sea visible sobre el álbum destino.
+                      setMovingTrack(true);
+                      const res = await fetch("/api/management/move", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ trackId: data.trackId, targetAlbumId: album.id }),
+                      });
+                      if (res.ok) {
+                        onReload();
+                      }
+                      setMovingTrack(false);
+                    }
+                  } catch {
+                    // Ignorar datos de arrastre que no son JSON (p.ej. archivos)
+                  } finally {
+                    setDropTargetId(null);
+                  }
+                }}
+                className={`relative flex items-center gap-3 w-full text-left px-3 py-2 rounded-lg transition-colors cursor-pointer ${
+                  active ? "bg-zinc-900 text-white" : isDropTarget ? "bg-emerald-900/40 border border-emerald-500/50 text-white" : "text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
                   }`}
               >
+                {movingTrack && isDropTarget && (
+                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                  </div>
+                )}
                 {album.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -252,7 +296,15 @@ function Dashboard({
             </div>
           </div>
 
-          {selected && <AlbumEditor key={selected.id} album={selected} onSaved={onReload} />}
+          {/* La key incluye la membresía de pistas: al subir o mover una canción
+              el editor se remonta con la lista fresca (el orden no remonta). */}
+          {selected && (
+            <AlbumEditor
+              key={`${selected.id}:${selected.tracks.map((t) => t.id).sort((a, b) => a - b).join("-")}`}
+              album={selected}
+              onSaved={onReload}
+            />
+          )}
         </div>
       </main>
     </div>
@@ -274,6 +326,88 @@ function AlbumEditor({
   const [overIndex, setOverIndex] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+
+  // Upload state
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadQueue, setUploadQueue] = useState<{ name: string; status: "pending" | "uploading" | "converting" | "done" | "error"; error?: string }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+
+  // Rename state (edición inline del título)
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState("");
+  const [renaming, setRenaming] = useState(false);
+
+  const startRename = (track: TrackWithStats) => {
+    setEditingId(track.id);
+    setEditValue(track.title);
+  };
+
+  const cancelRename = () => {
+    setEditingId(null);
+    setEditValue("");
+  };
+
+  const saveRename = async () => {
+    const id = editingId;
+    const title = editValue.trim();
+    if (!id || !title || renaming) return;
+    const original = tracks.find((t) => t.id === id)?.title;
+    if (title === original) {
+      cancelRename();
+      return;
+    }
+    setRenaming(true);
+    const res = await fetch("/api/management/rename", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trackId: id, title }),
+    });
+    setRenaming(false);
+    if (res.ok) {
+      // Actualizar el estado local (la key del editor no cambia con un rename)
+      setTracks((prev) => prev.map((t) => (t.id === id ? { ...t, title } : t)));
+      cancelRename();
+      onSaved();
+    }
+  };
+
+  const handleUpload = async (files: FileList) => {
+    const queue = Array.from(files).map((f) => ({ name: f.name, status: "pending" as const }));
+    setUploadQueue(queue);
+    setIsUploading(true);
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      // Mark as uploading
+      setUploadQueue((prev) => prev.map((item, j) => j === i ? { ...item, status: "uploading" } : item));
+
+      try {
+        // Mark as converting (upload + conversion happen server-side)
+        setUploadQueue((prev) => prev.map((item, j) => j === i ? { ...item, status: "converting" } : item));
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("albumId", album.id);
+
+        const res = await fetch("/api/management/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (res.ok) {
+          setUploadQueue((prev) => prev.map((item, j) => j === i ? { ...item, status: "done" } : item));
+        } else {
+          const data = await res.json().catch(() => ({ error: "Error desconocido" }));
+          setUploadQueue((prev) => prev.map((item, j) => j === i ? { ...item, status: "error", error: data.error || "Error" } : item));
+        }
+      } catch (err) {
+        setUploadQueue((prev) => prev.map((item, j) => j === i ? { ...item, status: "error", error: "Error de red" } : item));
+      }
+    }
+
+    setIsUploading(false);
+    onSaved(); // Reload catalog
+  };
 
   const dirty =
     tracks.length !== album.tracks.length ||
@@ -363,32 +497,116 @@ function AlbumEditor({
         <p className="text-xs text-zinc-500">
           {dirty ? "Tienes cambios sin guardar" : "Orden actual"}
         </p>
-        <button
-          onClick={save}
-          disabled={!dirty || saving}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer ${dirty && !saving
-            ? "bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.02] shadow-lg shadow-emerald-500/25"
-            : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-            }`}
-        >
-          {saving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : saved ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          {saved ? "Guardado" : "Guardar orden"}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Botón subir canciones */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="audio/*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files && e.target.files.length > 0) {
+                handleUpload(e.target.files);
+                e.target.value = "";
+              }
+            }}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isUploading}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Upload className="w-4 h-4" />
+            Subir canciones
+          </button>
+          <button
+            onClick={save}
+            disabled={!dirty || saving}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer ${dirty && !saving
+              ? "bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.02] shadow-lg shadow-emerald-500/25"
+              : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+              }`}
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saved ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {saved ? "Guardado" : "Guardar orden"}
+          </button>
+        </div>
       </div>
 
+      {/* Panel de progreso de subida */}
+      {uploadQueue.length > 0 && (
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+            <div className="flex items-center gap-2">
+              {isUploading ? (
+                <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              )}
+              <span className="text-sm font-semibold text-white">
+                {isUploading
+                  ? `Subiendo ${uploadQueue.filter((q) => q.status === "done").length + 1} de ${uploadQueue.length}...`
+                  : `${uploadQueue.filter((q) => q.status === "done").length} de ${uploadQueue.length} subidas completadas`}
+              </span>
+            </div>
+            {!isUploading && (
+              <button
+                onClick={() => setUploadQueue([])}
+                className="text-zinc-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <div className="divide-y divide-zinc-800/50 max-h-48 overflow-y-auto">
+            {uploadQueue.map((item, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="shrink-0">
+                  {item.status === "pending" && <Music className="w-4 h-4 text-zinc-600" />}
+                  {item.status === "uploading" && <Loader2 className="w-4 h-4 text-blue-400 animate-spin" />}
+                  {item.status === "converting" && <Loader2 className="w-4 h-4 text-amber-400 animate-spin" />}
+                  {item.status === "done" && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                  {item.status === "error" && <AlertCircle className="w-4 h-4 text-red-400" />}
+                </div>
+                <span className="text-sm text-zinc-300 truncate flex-1">{item.name}</span>
+                <span className={`text-[10px] font-bold uppercase tracking-wider shrink-0 ${
+                  item.status === "pending" ? "text-zinc-600" :
+                  item.status === "uploading" ? "text-blue-400" :
+                  item.status === "converting" ? "text-amber-400" :
+                  item.status === "done" ? "text-emerald-400" : "text-red-400"
+                }`}>
+                  {item.status === "pending" && "En cola"}
+                  {item.status === "uploading" && "Subiendo..."}
+                  {item.status === "converting" && "Convirtiendo..."}
+                  {item.status === "done" && "Lista"}
+                  {item.status === "error" && (item.error || "Error")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Encabezado de tabla */}
-      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
+      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-2 md:gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
         <span className="w-5" />
         <span className="text-center">#</span>
         <span>Título</span>
-        <span className="text-right min-w-[120px]">Reproducciones</span>
-        <span className="text-right w-16">Me gusta</span>
+        <span className="text-right">
+          <span className="hidden md:inline">Reproducciones</span>
+          <span className="md:hidden">Rep.</span>
+        </span>
+        <span className="text-right w-12 md:w-16">
+          <span className="hidden md:inline">Me gusta</span>
+          <HandIcon className="w-3.5 h-3.5 inline md:hidden" />
+        </span>
       </div>
 
       {/* Lista arrastrable */}
@@ -399,10 +617,11 @@ function AlbumEditor({
           return (
             <div
               key={track.id}
-              draggable
-              onDragStart={() => {
+              draggable={editingId === null}
+              onDragStart={(e) => {
                 setDragIndex(index);
                 setSaved(false);
+                e.dataTransfer.setData('application/json', JSON.stringify({ trackId: track.id, sourceAlbumId: album.id }));
               }}
               onDragEnter={() => setOverIndex(index)}
               onDragOver={(e) => e.preventDefault()}
@@ -411,7 +630,7 @@ function AlbumEditor({
                 setDragIndex(null);
                 setOverIndex(null);
               }}
-              className={`grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
+              className={`group grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-2 md:gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
                 ? "opacity-40 border-emerald-500/50 bg-zinc-900"
                 : isOver
                   ? "border-emerald-500 bg-zinc-900/80"
@@ -431,24 +650,75 @@ function AlbumEditor({
               <span className="text-center text-sm font-semibold text-zinc-500">{index + 1}</span>
 
               {/* Título + carátula */}
-              <div className="flex items-center gap-3 min-w-0">
+              <div className="flex items-center gap-2 md:gap-3 min-w-0">
                 {track.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={track.coverImage.replace('/brand/', '/cd/')} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
                 ) : (
                   <div className="w-9 h-9 rounded bg-zinc-800 shrink-0" />
                 )}
-                <div className="min-w-0">
-                  <span className="block text-sm font-semibold text-white truncate">{track.title}</span>
-                  <span className="block text-xs text-zinc-500 truncate">
-                    {track.artist} • {formatTime(track.duration)}
-                  </span>
+                <div className="min-w-0 flex-1">
+                  {editingId === track.id ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        saveRename();
+                      }}
+                      className="flex items-center gap-1.5"
+                    >
+                      <input
+                        autoFocus
+                        value={editValue}
+                        maxLength={120}
+                        disabled={renaming}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") cancelRename();
+                        }}
+                        className="flex-1 min-w-0 bg-zinc-950 border border-emerald-500/60 text-white text-sm font-semibold rounded px-2 py-1 focus:outline-none focus:border-emerald-400"
+                      />
+                      <button
+                        type="submit"
+                        disabled={renaming || !editValue.trim()}
+                        className="p-1 text-emerald-400 hover:text-emerald-300 disabled:opacity-40 cursor-pointer shrink-0"
+                        title="Guardar nombre"
+                      >
+                        {renaming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelRename}
+                        disabled={renaming}
+                        className="p-1 text-zinc-500 hover:text-white cursor-pointer shrink-0"
+                        title="Cancelar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </form>
+                  ) : (
+                    <>
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-semibold text-white truncate">{track.title}</span>
+                        <button
+                          onClick={() => startRename(track)}
+                          className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-500 hover:text-emerald-400 transition-all cursor-pointer shrink-0"
+                          title="Renombrar canción"
+                          aria-label={`Renombrar ${track.title}`}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                      </span>
+                      <span className="block text-xs text-zinc-500 truncate">
+                        {track.artist} • {formatTime(track.duration)}
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
-              {/* Reproducciones con barra proporcional */}
-              <div className="flex items-center gap-3 justify-end min-w-[120px]">
-                <div className="hidden sm:block flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              {/* Reproducciones con barra proporcional (la barra solo en md+) */}
+              <div className="flex items-center gap-3 justify-end">
+                <div className="hidden md:block w-20 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-emerald-500/80 rounded-full"
                     style={{ width: `${(track.plays / maxPlays) * 100}%` }}
@@ -461,7 +731,7 @@ function AlbumEditor({
               </div>
 
               {/* Likes */}
-              <div className="flex items-center justify-end gap-1.5 text-sm font-mono text-zinc-300 tabular-nums w-16">
+              <div className="flex items-center justify-end gap-1.5 text-sm font-mono text-zinc-300 tabular-nums w-12 md:w-16">
                 <HandIcon className="w-3.5 h-3.5 text-yellow-500" />
                 {track.likes.toLocaleString("es")}
               </div>
