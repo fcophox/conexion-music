@@ -21,6 +21,15 @@ function formatTime(seconds: number) {
   return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
 }
 
+function HandIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M2.45867 13.5C0.57567 12.75 0.38767 11.065 0.54267 9.66701C0.64967 8.69701 1.45367 8.08301 2.40767 8.08301C3.30267 8.08301 5.11567 8.08701 5.11567 8.08701C5.79967 8.14001 6.29567 8.76301 6.23067 9.43601C6.13067 10.472 4.90667 10.584 4.08367 10.792C4.71467 11.082 5.95367 11.887 5.85967 12.772" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+      <path d="M8.959 13.5L9.412 13.047C9.78358 12.6755 10.0783 12.2345 10.2794 11.7491C10.4805 11.2637 10.584 10.7434 10.584 10.218V4.021C10.584 3.273 9.978 2.667 9.23 2.667C8.482 2.667 7.875 3.273 7.875 4.021V7C6.259 6.274 5.861 6.202 4.084 6.458V1.854C4.084 1.106 3.478 0.5 2.73 0.5C1.982 0.5 1.375 1.106 1.375 1.854V8.332" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 export default function ManagementClient() {
   const [authed, setAuthed] = useState<boolean | null>(null); // null = comprobando
   const [albums, setAlbums] = useState<AlbumWithStats[]>([]);
@@ -187,7 +196,7 @@ function Dashboard({
                 {album.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={album.coverImage}
+                    src={album.coverImage.replace('/brand/', '/cd/')}
                     alt=""
                     className="w-9 h-9 rounded object-cover shrink-0"
                   />
@@ -310,7 +319,7 @@ function AlbumEditor({
           {album.coverImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={album.coverImage}
+              src={album.coverImage.replace('/brand/', '/cd/')}
               alt=""
               className="w-24 h-24 md:w-32 md:h-32 rounded-lg object-cover shadow-xl shrink-0"
             />
@@ -425,7 +434,7 @@ function AlbumEditor({
               <div className="flex items-center gap-3 min-w-0">
                 {track.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={track.coverImage} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
+                  <img src={track.coverImage.replace('/brand/', '/cd/')} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
                 ) : (
                   <div className="w-9 h-9 rounded bg-zinc-800 shrink-0" />
                 )}
@@ -453,7 +462,7 @@ function AlbumEditor({
 
               {/* Likes */}
               <div className="flex items-center justify-end gap-1.5 text-sm font-mono text-zinc-300 tabular-nums w-16">
-                <Heart className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+                <HandIcon className="w-3.5 h-3.5 text-yellow-500" />
                 {track.likes.toLocaleString("es")}
               </div>
             </div>

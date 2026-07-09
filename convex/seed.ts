@@ -48,3 +48,27 @@ export const seedIfEmpty = mutation({
     return { seeded: true };
   },
 });
+
+export const addQuintoDisco = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("albums").collect();
+    const sortOrder = existing.length;
+    await ctx.db.insert("albums", {
+      albumId: "quinto-disco",
+      title: "Quinto Disco",
+      artist: "conexión",
+      description: "Próximo lanzamiento de conexión.",
+      creator: "conexión",
+      tracksCount: "0 canciones",
+      durationText: "0 min",
+      coverGradient: "from-zinc-800 to-black",
+      coverArtDesign: "image",
+      coverImage: "/cd/cover_cover_conexion.png",
+      year: 2027,
+      disabled: true,
+      sortOrder: sortOrder,
+    });
+    return { added: true };
+  },
+});

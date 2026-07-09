@@ -32,6 +32,40 @@ function slugify(text: string) {
     .replace(/(^-|-$)+/g, "");
 }
 
+const BACKGROUNDS = [
+  '/brand/bg-conexion.png',
+  '/cd/bg-conexion-cover.png',
+  '/cd/bg-conexio-cero.png',
+  '/cd/bg-conexion-doblecero.png',
+  '/cd/bg-conexion-geminis.png',
+  '/cd/bg-conexion-vertical.png'
+];
+
+function HandIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 12 14" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M2.45867 13.5C0.57567 12.75 0.38767 11.065 0.54267 9.66701C0.64967 8.69701 1.45367 8.08301 2.40767 8.08301C3.30267 8.08301 5.11567 8.08701 5.11567 8.08701C5.79967 8.14001 6.29567 8.76301 6.23067 9.43601C6.13067 10.472 4.90667 10.584 4.08367 10.792C4.71467 11.082 5.95367 11.887 5.85967 12.772" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M8.959 13.5L9.412 13.047C9.78358 12.6755 10.0783 12.2345 10.2794 11.7491C10.4805 11.2637 10.584 10.7434 10.584 10.218V4.021C10.584 3.273 9.978 2.667 9.23 2.667C8.482 2.667 7.875 3.273 7.875 4.021V7C6.259 6.274 5.861 6.202 4.084 6.458V1.854C4.084 1.106 3.478 0.5 2.73 0.5C1.982 0.5 1.375 1.106 1.375 1.854V8.332" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function BackgroundCrossfade({ currentBg }: { currentBg: string }) {
+  return (
+    <>
+      {BACKGROUNDS.map((bg) => (
+        <img
+          key={bg}
+          src={bg}
+          alt=""
+          className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out pointer-events-none ${bg === currentBg ? 'opacity-90' : 'opacity-0'
+            }`}
+        />
+      ))}
+    </>
+  );
+}
+
 export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -68,6 +102,26 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const mainRef = useRef<HTMLDivElement>(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<TrackWithStats | null>(null);
+  const [hoveredAlbumId, setHoveredAlbumId] = useState<string | null>(null);
+
+  const currentBg = (() => {
+    const targetId = hoveredAlbumId || (selectedAlbum ? selectedAlbum.id : null);
+
+    if (targetId) {
+      const album = albums.find(a => a.id === targetId);
+      if (album?.disabled) {
+        return '/cd/bg-conexion-cover.png';
+      }
+    }
+
+    switch (targetId) {
+      case 'cero': return '/cd/bg-conexio-cero.png';
+      case 'doble-cero': return '/cd/bg-conexion-doblecero.png';
+      case 'geminis': return '/cd/bg-conexion-geminis.png';
+      case 'vertical': return '/cd/bg-conexion-vertical.png';
+      default: return '/brand/bg-conexion.png';
+    }
+  })();
 
   // Sync state from URL search params
   useEffect(() => {
@@ -162,8 +216,8 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   };
 
   // Track playback state (tied to whichever track is currently playing globally)
-  const [currentPlaylist, setCurrentPlaylist] = useState<TrackWithStats[]>(albums[0]?.tracks ?? []);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
+  const [currentPlaylist, setCurrentPlaylist] = useState<TrackWithStats[]>([]);
+  const [currentTrackIndex, setCurrentTrackIndex] = useState(-1);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
@@ -388,9 +442,10 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   // Helper to draw geometric/gradient album art using CSS or load image
   const renderCoverArt = (coverArtDesign: string, coverGradient: string, sizeClass: string = "w-full h-full", coverImage?: string) => {
     if (coverImage) {
+      const finalImage = coverImage.replace('/brand/', '/cd/');
       return (
         <img
-          src={coverImage}
+          src={finalImage}
           alt="Cover Art"
           className={`object-cover ${sizeClass} select-none`}
         />
@@ -480,11 +535,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
               <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <img
-                  src="/brand/bg-conexion.png"
-                  alt=""
-                  className="w-full h-full object-cover object-center opacity-90"
-                />
+                <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
               {/* Sticky Header back button */}
@@ -510,8 +561,8 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                   </div>
 
                   <div className="space-y-2 w-full">
-                    <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Letra de Canción</span>
-                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">{selectedTrackForLyrics.title}</h1>
+                    <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Letra</span>
+                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight">{selectedTrackForLyrics.title}</h1>
                     <p className="text-zinc-400 text-base">por <span className="text-white font-bold">{selectedTrackForLyrics.artist}</span></p>
                     <p className="text-zinc-500 text-sm italic">Álbum: {selectedTrackForLyrics.album}</p>
                   </div>
@@ -675,11 +726,7 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
               <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <img
-                  src="/brand/bg-conexion.png"
-                  alt=""
-                  className="w-full h-full object-cover object-center opacity-90"
-                />
+                <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
               {/* Sticky Header back button */}
@@ -710,17 +757,17 @@ Que viaja directo a tu dirección.`;
 
               {/* Albums blocks */}
               <div className="w-full flex flex-col gap-24 pb-44 z-10">
-                {albums.map(album => (
+                {albums.map((album, index) => (
                   <div key={album.id} className="w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative flex flex-col lg:flex-row gap-8 lg:gap-16">
                     {/* Left Column: Big Cover and Info */}
                     <div className="w-full lg:w-[320px] xl:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
                       <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-[300px] lg:h-[300px] xl:w-[380px] xl:h-[380px] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
-                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.coverImage)}
+                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
                       </div>
 
                       <div className="space-y-2 w-full">
                         <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">{album.year}</span>
-                        <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight">{album.title}</h2>
+                        <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight">{album.disabled ? `Disco ${index + 1}` : album.title}</h2>
                         {album.disabled && (
                           <span className="inline-block mt-2 bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
                         )}
@@ -791,11 +838,7 @@ Que viaja directo a tu dirección.`;
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10">
-                <img
-                  src="/brand/bg-conexion.png"
-                  alt=""
-                  className="w-full h-full object-cover object-center opacity-90"
-                />
+                <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
               {/* ===== NETFLIX-STYLE HERO ===== */}
@@ -856,24 +899,26 @@ Que viaja directo a tu dirección.`;
                   onMouseLeave={handleDiscosUp}
                   className="flex gap-4 overflow-x-auto pt-4 pb-4 -mx-4 px-4 md:-mx-4 md:px-4 no-scrollbar cursor-grab active:cursor-grabbing select-none"
                 >
-                  {albums.map((album) => (
+                  {albums.map((album, index) => (
                     <div
                       key={album.id}
+                      onMouseEnter={() => setHoveredAlbumId(album.id)}
+                      onMouseLeave={() => setHoveredAlbumId(null)}
                       onClick={() => {
                         if (drag.current.moved) return;
                         if (!album.disabled) updateUrl(album.id, null);
                       }}
                       className={`w-[46%] sm:w-[38%] md:w-[28%] lg:w-[22%] xl:w-[18%] shrink-0 rounded-2xl transition-all duration-300 ${album.disabled
-                        ? "opacity-55 cursor-not-allowed"
+                        ? "cursor-not-allowed"
                         : "group cursor-pointer hover:-translate-y-1"
                         }`}
                     >
                       <div className="w-full aspect-square rounded-2xl overflow-hidden bg-zinc-800 relative mb-3 flex items-center justify-center shadow-lg shadow-black/40">
-                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.coverImage)}
+                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
 
                         {album.disabled ? (
                           /* Pronto Overlay Badge */
-                          <div className="absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center">
+                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                             <span className="bg-[#FFC107]/90 text-black text-xs font-black tracking-widest uppercase px-3 py-1 rounded shadow shadow-[#FFC107]/25">Pronto</span>
                           </div>
                         ) : (
@@ -891,7 +936,7 @@ Que viaja directo a tu dirección.`;
                         )}
                       </div>
 
-                      <h3 className={`font-bold text-sm truncate ${album.disabled ? 'text-zinc-500' : 'text-white'}`}>{album.title}</h3>
+                      <h3 className={`font-bold text-sm truncate ${album.disabled ? 'text-zinc-500' : 'text-white'}`}>{album.disabled ? `Disco ${index + 1}` : album.title}</h3>
                       <p className="text-zinc-500 text-xs mt-1 truncate">Por {album.artist} • {album.year}</p>
                     </div>
                   ))}
@@ -907,11 +952,7 @@ Que viaja directo a tu dirección.`;
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10 hidden md:block">
-                <img
-                  src="/brand/bg-conexion.png"
-                  alt=""
-                  className="w-full h-full object-cover object-center opacity-90"
-                />
+                <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
               {/* Sticky Header Controls & Summary Bar */}
@@ -974,7 +1015,7 @@ Que viaja directo a tu dirección.`;
                   <div className="flex-1 text-center lg:text-left space-y-3 md:space-y-4 z-10 px-4 md:px-0 pt-[180px] md:pt-0 w-full relative min-w-0">
                     <span className="text-xs uppercase tracking-widest font-extrabold text-zinc-300 md:text-zinc-400 drop-shadow-md">ÁLBUM</span>
                     <div className="flex flex-col lg:flex-row items-center lg:items-center lg:justify-between gap-2 lg:gap-4 w-full lg:pr-12">
-                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
+                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
                       <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 lg:h-8 w-auto opacity-80 shrink-0 hidden lg:block" />
                     </div>
                     <p className="hidden md:block text-zinc-300 md:text-zinc-400 text-sm max-w-2xl leading-relaxed drop-shadow-md mx-auto lg:mx-0">{selectedAlbum.description}</p>
@@ -1064,10 +1105,10 @@ Que viaja directo a tu dirección.`;
                             <div className="col-span-4 md:col-span-1 flex items-center justify-end gap-3 text-zinc-400 text-sm">
                               <button
                                 onClick={(e) => handleLike(e, track.id, track.likes)}
-                                className="flex items-center gap-1 hover:text-emerald-500 cursor-pointer rounded transition-colors text-zinc-500 hover:text-white"
+                                className={`flex items-center gap-1 cursor-pointer rounded transition-colors ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'text-yellow-500' : 'text-zinc-500 hover:text-yellow-500'}`}
                                 title="Me gusta"
                               >
-                                <Heart className={`w-3.5 h-3.5 ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'fill-emerald-500 text-emerald-500' : ''}`} />
+                                <HandIcon className={`w-3.5 h-3.5 ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'text-yellow-500' : ''}`} />
                                 <span className="text-xs">{localLikes[track.id] ?? track.likes}</span>
                               </button>
                               <span className="font-mono text-xs">{formatTime(track.duration)}</span>
@@ -1098,113 +1139,131 @@ Que viaja directo a tu dirección.`;
         </main>
 
         {/* GLOBAL PLAYER BAR (full width, compact on mobile, full controls on desktop) */}
-        {currentTrack && (
-          <div className="fixed bottom-16 md:bottom-20 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 z-50 shadow-lg shadow-black/40">
-            <div className="flex items-center justify-between px-3 md:px-8 lg:px-12 h-14 md:h-[76px] gap-4 max-w-[1400px] mx-auto">
+        <div className="fixed bottom-16 md:bottom-20 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 z-50 shadow-lg shadow-black/40">
+          <div className="flex items-center justify-between px-3 md:px-8 lg:px-12 h-14 md:h-[76px] gap-4 max-w-[1400px] mx-auto">
 
-              {/* Track info */}
-              <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none md:w-1/4">
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                  {renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage)}
-                </div>
-                <div className="truncate min-w-0">
-                  <span className="block font-bold text-xs md:text-sm truncate text-white">{currentTrack.title}</span>
-                  <span className="block text-zinc-400 text-[10px] md:text-xs truncate">{currentTrack.artist}</span>
-                </div>
+            {/* Track info */}
+            <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none md:w-1/4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
+                {currentTrack ? renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage) : renderCoverArt("", "", "w-full h-full", "/cd/cover_cover_conexion.png")}
               </div>
-
-              {/* Desktop: transport controls + seek bar */}
-              <div className="hidden md:flex flex-col items-center flex-1 gap-1.5 min-w-0">
-                <div className="flex items-center gap-5">
-                  <button
-                    onClick={handlePrev}
-                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <SkipBack className="w-4 h-4 fill-current" />
-                  </button>
-                  <button
-                    onClick={handlePlayPause}
-                    className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-all cursor-pointer"
-                  >
-                    {isPlaying ? (
-                      <Pause className="w-4 h-4 fill-current text-black" />
-                    ) : (
-                      <Play className="w-4 h-4 text-black" />
-                    )}
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                  >
-                    <SkipForward className="w-4 h-4 fill-current" />
-                  </button>
-                </div>
-                <div className="flex items-center gap-2 w-full max-w-md text-[10px] text-zinc-400 font-mono">
-                  <span>{formatTime(displayTime)}</span>
-                  <div
-                    onClick={handleSeek}
-                    className="flex-1 bg-zinc-800 h-1 rounded-full overflow-hidden cursor-pointer"
-                  >
-                    <div
-                      className="bg-zinc-100 h-full transition-all duration-300 pointer-events-none"
-                      style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <span>{formatTime(displayDuration)}</span>
-                </div>
+              <div className="truncate min-w-0">
+                <span className="block font-bold text-xs md:text-sm truncate text-white">{currentTrack ? currentTrack.title : "--"}</span>
+                <span className="block text-zinc-400 text-[10px] md:text-xs truncate">{currentTrack ? currentTrack.artist : "--"}</span>
               </div>
+            </div>
 
-              {/* Desktop: volume */}
-              <div className="hidden md:flex items-center gap-2 w-1/4 justify-end text-zinc-400">
+            {/* Desktop: transport controls + seek bar */}
+            <div className="hidden md:flex flex-col items-center flex-1 gap-1.5 min-w-0">
+              <div className="flex items-center gap-5">
                 <button
-                  onClick={() => setIsMuted(!isMuted)}
-                  className="hover:text-white cursor-pointer shrink-0"
+                  onClick={handlePrev}
+                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
                 >
-                  {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  <SkipBack className="w-4 h-4 fill-current" />
                 </button>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={isMuted ? 0 : volume}
-                  onChange={(e) => {
-                    setVolume(Number(e.target.value));
-                    if (isMuted) setIsMuted(false);
-                  }}
-                  className="w-24 accent-zinc-100 bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
-                />
-              </div>
-
-              {/* Mobile: compact controls */}
-              <div className="flex md:hidden items-center gap-3 shrink-0 pl-2">
                 <button
                   onClick={handlePlayPause}
-                  className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
+                  className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-all cursor-pointer"
                 >
                   {isPlaying ? (
-                    <Pause className="w-3 h-3 fill-current text-black" />
+                    <Pause className="w-4 h-4 fill-current text-black" />
                   ) : (
-                    <Play className="w-3 h-3 text-black" />
+                    <Play className="w-4 h-4 text-black" />
                   )}
                 </button>
                 <button
                   onClick={handleNext}
-                  className="text-zinc-400 hover:text-white cursor-pointer"
+                  className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
                 >
                   <SkipForward className="w-4 h-4 fill-current" />
                 </button>
               </div>
+              <div className="flex items-center gap-2 w-full max-w-md text-[10px] text-zinc-400 font-mono">
+                <span>{formatTime(displayTime)}</span>
+                <div
+                  onClick={handleSeek}
+                  className="flex-1 bg-zinc-800 h-1 rounded-full overflow-hidden cursor-pointer"
+                >
+                  <div
+                    className="bg-zinc-100 h-full transition-all duration-300 pointer-events-none"
+                    style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
+                  />
+                </div>
+                <span>{formatTime(displayDuration)}</span>
+              </div>
             </div>
 
-            {/* Mobile: progress bar at the top of the player */}
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-800 overflow-hidden md:hidden">
-              <div
-                className="bg-emerald-500 h-full transition-all duration-300"
-                style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
+            {/* Desktop: volume */}
+            <div className="hidden md:flex items-center gap-2 w-1/4 justify-end text-zinc-400 pr-2">
+              <button
+                onClick={() => setIsMuted(!isMuted)}
+                className="hover:text-white cursor-pointer shrink-0"
+              >
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </button>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={isMuted ? 0 : volume}
+                onChange={(e) => {
+                  setVolume(Number(e.target.value));
+                  if (isMuted) setIsMuted(false);
+                }}
+                className="w-24 accent-zinc-100 bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
               />
+              {currentTrack && (
+                <button
+                  onClick={(e) => {
+                    const hasLiked = (localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes;
+                    if (!hasLiked) {
+                      handleLike(e, currentTrack.id, currentTrack.likes);
+                    }
+                  }}
+                  className={`hover:scale-110 transition-transform cursor-pointer shrink-0 ml-2 ${(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes
+                      ? 'text-yellow-500'
+                      : 'hover:text-yellow-500'
+                    }`}
+                  title={(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes ? "Te gusta" : "Dar me gusta"}
+                >
+                  <HandIcon className={`w-4 h-4 ${(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes
+                      ? 'text-yellow-500'
+                      : ''
+                    }`} />
+                </button>
+              )}
+            </div>
+
+            {/* Mobile: compact controls */}
+            <div className="flex md:hidden items-center gap-3 shrink-0 pl-2">
+              <button
+                onClick={handlePlayPause}
+                className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
+              >
+                {isPlaying ? (
+                  <Pause className="w-3 h-3 fill-current text-black" />
+                ) : (
+                  <Play className="w-3 h-3 text-black" />
+                )}
+              </button>
+              <button
+                onClick={handleNext}
+                className="text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <SkipForward className="w-4 h-4 fill-current" />
+              </button>
             </div>
           </div>
-        )}
+
+          {/* Mobile: progress bar at the top of the player */}
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-800 overflow-hidden md:hidden">
+            <div
+              className="bg-emerald-500 h-full transition-all duration-300"
+              style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
 
         {/* BOTTOM NAVIGATION BAR (all screen sizes, per wireframe) */}
         <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-24 items-center z-50">
