@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const duration = getDuration(masterPath);
 
     // Convertir a HLS cifrado con el script existente
-    const scriptPath = path.join(root, "scripts", "protect-audio.mjs");
+    const scriptPath = [root, "scripts", "protect-audio.mjs"].join(path.sep);
     execFileSync("node", [scriptPath, masterPath, String(trackId)], {
       stdio: "pipe",
       cwd: root,
