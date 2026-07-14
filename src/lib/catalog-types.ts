@@ -10,6 +10,10 @@ export interface Track {
   coverGradient: string;
   coverArtDesign: "circle" | "retro" | "wave" | "neon" | "sunset" | "image";
   coverImage?: string;
+  // Imagen de fondo propia de la canción; si falta, la vista usa la carátula
+  // del disco. La letra también es opcional (hay letras por defecto en el home).
+  bgImage?: string;
+  lyrics?: string;
 }
 
 export interface Album {

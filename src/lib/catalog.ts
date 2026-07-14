@@ -130,6 +130,18 @@ export async function getNextTrackId(): Promise<number> {
   }
 }
 
+export async function updateTrackDetails(details: {
+  trackId: number;
+  bgImage?: string;
+  lyrics?: string;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.updateTrackDetails, details);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function addTrack(track: {
   trackId: number;
   albumId: string;

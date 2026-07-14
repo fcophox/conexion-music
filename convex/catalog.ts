@@ -39,6 +39,8 @@ export const getCatalog = query({
             coverGradient: t.coverGradient,
             coverArtDesign: t.coverArtDesign,
             coverImage: t.coverImage,
+            bgImage: t.bgImage,
+            lyrics: t.lyrics,
           })),
         };
       })
@@ -207,6 +209,29 @@ export const renameTrack = mutation({
       .unique();
     if (!track) return { ok: false as const, error: "Canción no encontrada" };
     await ctx.db.patch(track._id, { title: clean });
+    return { ok: true as const };
+  },
+});
+
+// Actualiza la imagen de fondo y/o la letra de una canción. Solo modifica los
+// campos presentes en los argumentos; una cadena vacía elimina el valor.
+export const updateTrackDetails = mutation({
+  args: {
+    trackId: v.number(),
+    bgImage: v.optional(v.string()),
+    lyrics: v.optional(v.string()),
+  },
+  handler: async (ctx, { trackId, bgImage, lyrics }) => {
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
+      .unique();
+    if (!track) return { ok: false as const, error: "Canción no encontrada" };
+
+    const patch: { bgImage?: string | undefined; lyrics?: string | undefined } = {};
+    if (bgImage !== undefined) patch.bgImage = bgImage === "" ? undefined : bgImage;
+    if (lyrics !== undefined) patch.lyrics = lyrics === "" ? undefined : lyrics;
+    await ctx.db.patch(track._id, patch);
     return { ok: true as const };
   },
 });

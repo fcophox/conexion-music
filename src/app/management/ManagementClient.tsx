@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  Compass,
   GripVertical,
   Play,
   Lock,
@@ -18,6 +17,10 @@ import {
   CheckCircle2,
   AlertCircle,
   Pencil,
+  ChevronRight,
+  ImagePlus,
+  Trash2,
+  FileText,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -100,17 +103,27 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 font-sans">
+    <div className="relative min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-4 font-sans overflow-hidden">
+      {/* Fondo a pantalla completa: se escala centrado y sin deformarse */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/management/management.png"
+        alt=""
+        aria-hidden
+        className="absolute inset-0 w-full h-full object-cover object-center select-none pointer-events-none"
+      />
+      <div className="absolute inset-0 bg-black/60" />
+
       <form
         onSubmit={submit}
-        className="relative w-full max-w-sm bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl space-y-6"
+        className="relative w-full max-w-sm bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-2xl p-8 shadow-2xl space-y-6"
       >
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-emerald-500 text-black">
-            <Compass className="w-5 h-5" />
-          </div>
-          <span className="text-lg font-bold tracking-wider">conexión</span>
-          <span className="text-xs text-zinc-500 font-semibold ml-auto">Manager</span>
+        <div className="flex flex-col items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-10 w-auto" />
+          <span className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest">
+            Manager
+          </span>
         </div>
 
         <div className="space-y-2">
@@ -173,15 +186,13 @@ function Dashboard({
     .reduce((sum, t) => sum + t.plays, 0);
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans flex">
-      {/* Sidebar de álbumes */}
-      <aside className="w-64 lg:w-72 shrink-0 border-r border-zinc-900 bg-zinc-950 flex flex-col">
+    <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex">
+      {/* Sidebar de álbumes: alto fijo de la pantalla, con scroll interno */}
+      <aside className="w-64 lg:w-72 shrink-0 h-full border-r border-zinc-900 bg-zinc-950 flex flex-col">
         <div className="p-6 border-b border-zinc-900">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-emerald-500 text-black">
-              <Compass className="w-5 h-5" />
-            </div>
-            <span className="text-lg font-bold tracking-wider">conexión</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 w-auto" />
             <span className="text-[10px] text-zinc-500 font-semibold ml-auto uppercase tracking-widest">
               Manager
             </span>
@@ -336,6 +347,9 @@ function AlbumEditor({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editValue, setEditValue] = useState("");
   const [renaming, setRenaming] = useState(false);
+
+  // Drawer de detalles (imagen de fondo + letra)
+  const [detailsTrack, setDetailsTrack] = useState<TrackWithStats | null>(null);
 
   const startRename = (track: TrackWithStats) => {
     setEditingId(track.id);
@@ -595,7 +609,7 @@ function AlbumEditor({
       )}
 
       {/* Encabezado de tabla */}
-      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-2 md:gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
+      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto_auto] items-center gap-2 md:gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
         <span className="w-5" />
         <span className="text-center">#</span>
         <span>Título</span>
@@ -607,6 +621,7 @@ function AlbumEditor({
           <span className="hidden md:inline">Me gusta</span>
           <HandIcon className="w-3.5 h-3.5 inline md:hidden" />
         </span>
+        <span className="w-7" />
       </div>
 
       {/* Lista arrastrable */}
@@ -630,7 +645,7 @@ function AlbumEditor({
                 setDragIndex(null);
                 setOverIndex(null);
               }}
-              className={`group grid grid-cols-[auto_2rem_1fr_auto_auto] items-center gap-2 md:gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
+              className={`group grid grid-cols-[auto_2rem_1fr_auto_auto_auto] items-center gap-2 md:gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
                 ? "opacity-40 border-emerald-500/50 bg-zinc-900"
                 : isOver
                   ? "border-emerald-500 bg-zinc-900/80"
@@ -735,9 +750,269 @@ function AlbumEditor({
                 <HandIcon className="w-3.5 h-3.5 text-yellow-500" />
                 {track.likes.toLocaleString("es")}
               </div>
+
+              {/* Abrir detalles (imagen de fondo + letra) */}
+              <button
+                onClick={() => setDetailsTrack(track)}
+                className="p-1 rounded text-zinc-500 hover:text-emerald-400 hover:bg-zinc-800/80 transition-colors cursor-pointer w-7 flex items-center justify-center"
+                title="Imagen y letra de la canción"
+                aria-label={`Detalles de ${track.title}`}
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
           );
         })}
+      </div>
+
+      {/* Drawer de detalles */}
+      {detailsTrack && (
+        <TrackDetailsDrawer
+          track={detailsTrack}
+          onClose={() => setDetailsTrack(null)}
+          onUpdated={(trackId, patch) => {
+            setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, ...patch } : t)));
+            onSaved();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ========================================================================= */
+/* DRAWER DE DETALLES (imagen de fondo + letra)                              */
+/* ========================================================================= */
+function TrackDetailsDrawer({
+  track,
+  onClose,
+  onUpdated,
+}: {
+  track: TrackWithStats;
+  onClose: () => void;
+  onUpdated: (trackId: number, patch: { bgImage?: string; lyrics?: string }) => void;
+}) {
+  const [visible, setVisible] = useState(false);
+  const [lyrics, setLyrics] = useState(track.lyrics ?? "");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const close = useCallback(() => {
+    setVisible(false);
+    setTimeout(onClose, 300);
+  }, [onClose]);
+
+  // Animación de entrada (de izquierda a derecha) tras el montaje.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  // Cerrar con Escape.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") close();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [close]);
+
+  // Liberar la URL de la vista previa al cambiarla o desmontar.
+  useEffect(() => {
+    return () => {
+      if (imagePreview) URL.revokeObjectURL(imagePreview);
+    };
+  }, [imagePreview]);
+
+  const pickImage = (file: File) => {
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setRemoveImage(false);
+    setSaved(false);
+  };
+
+  const currentImage = removeImage ? null : imagePreview ?? track.bgImage ?? null;
+  const dirty = imageFile !== null || removeImage || lyrics !== (track.lyrics ?? "");
+
+  const save = async () => {
+    if (saving || !dirty) return;
+    setSaving(true);
+    setError(null);
+    const formData = new FormData();
+    formData.append("trackId", String(track.id));
+    formData.append("lyrics", lyrics);
+    if (removeImage) {
+      formData.append("removeImage", "1");
+    } else if (imageFile) {
+      formData.append("image", imageFile);
+    }
+    try {
+      const res = await fetch("/api/management/track-details", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Error al guardar");
+        return;
+      }
+      const patch: { bgImage?: string; lyrics?: string } = { lyrics: lyrics.trim() };
+      if (removeImage) patch.bgImage = undefined;
+      else if (data.bgImage) patch.bgImage = data.bgImage;
+      onUpdated(track.id, patch);
+      setImageFile(null);
+      setRemoveImage(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch {
+      setError("Error de red");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      {/* Backdrop */}
+      <div
+        onClick={close}
+        className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${visible ? "opacity-100" : "opacity-0"}`}
+      />
+
+      {/* Panel (entra desde la izquierda hacia la derecha) */}
+      <div
+        className={`absolute left-0 top-0 h-full w-full max-w-md bg-zinc-950 border-r border-zinc-800 shadow-2xl flex flex-col transition-transform duration-300 ease-out ${visible ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-zinc-900 shrink-0">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">
+              Detalles de la canción
+            </p>
+            <h3 className="text-lg font-black text-white truncate">{track.title}</h3>
+          </div>
+          <button
+            onClick={close}
+            className="p-2 rounded-lg text-zinc-500 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer shrink-0"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-6">
+          {/* Imagen de fondo */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <ImagePlus className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm font-bold text-white">Imagen de fondo</span>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Se muestra como fondo al abrir la canción. Si no hay imagen, se usa la
+              carátula del disco.
+            </p>
+
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) pickImage(file);
+                e.target.value = "";
+              }}
+            />
+
+            {currentImage ? (
+              <div className="relative rounded-xl overflow-hidden border border-zinc-800 group/img">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={currentImage} alt="" className="w-full h-44 object-cover" />
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <button
+                    onClick={() => imageInputRef.current?.click()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-100 text-black text-xs font-bold hover:bg-white transition-colors cursor-pointer"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    Cambiar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setImageFile(null);
+                      setImagePreview(null);
+                      setRemoveImage(track.bgImage != null);
+                      setSaved(false);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/90 text-white text-xs font-bold hover:bg-red-500 transition-colors cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Quitar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => imageInputRef.current?.click()}
+                className="w-full h-44 rounded-xl border-2 border-dashed border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-900/40 transition-colors flex flex-col items-center justify-center gap-2 text-zinc-500 hover:text-zinc-300 cursor-pointer"
+              >
+                <ImagePlus className="w-6 h-6" />
+                <span className="text-xs font-semibold">Subir imagen (JPG, PNG o WebP)</span>
+              </button>
+            )}
+          </div>
+
+          {/* Letra */}
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <FileText className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm font-bold text-white">Letra de la canción</span>
+            </div>
+            <textarea
+              value={lyrics}
+              onChange={(e) => {
+                setLyrics(e.target.value);
+                setSaved(false);
+              }}
+              placeholder={"Escribe o pega la letra aquí...\n\n[Coro]\n..."}
+              rows={12}
+              className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 placeholder-zinc-600 rounded-xl px-4 py-3 text-sm leading-relaxed focus:outline-none focus:border-emerald-500 transition-colors resize-y font-sans"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {error}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-5 border-t border-zinc-900 shrink-0">
+          <button
+            onClick={save}
+            disabled={!dirty || saving}
+            className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all cursor-pointer ${dirty && !saving
+              ? "bg-emerald-500 hover:bg-emerald-400 text-black hover:scale-[1.01] shadow-lg shadow-emerald-500/25"
+              : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+              }`}
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saved ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {saved ? "Guardado" : "Guardar cambios"}
+          </button>
+        </div>
       </div>
     </div>
   );

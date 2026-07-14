@@ -545,20 +545,31 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
             /* SONG LYRICS VIEW                                                          */
             /* ========================================================================= */
             <div className="flex flex-col w-full min-h-full relative animate-fade-in">
-              {/* Blurred Atmospheric Background (Mobile) */}
+              {/* Blurred Atmospheric Background (Mobile). Prioriza la imagen
+                  propia de la canción; si no tiene, usa la carátula del disco. */}
               <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 md:hidden">
                 <div className="absolute inset-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-zinc-950 z-10" />
-                {selectedTrackForLyrics.coverImage && (
+                {(selectedTrackForLyrics.bgImage || selectedTrackForLyrics.coverImage) && (
                   <div
                     className="absolute inset-0 bg-cover bg-center opacity-15 blur-3xl scale-125"
-                    style={{ backgroundImage: `url(${selectedTrackForLyrics.coverImage})` }}
+                    style={{ backgroundImage: `url(${selectedTrackForLyrics.bgImage || selectedTrackForLyrics.coverImage})` }}
                   />
                 )}
               </div>
 
-              {/* BACKGROUND IMAGE (Top Right - Desktop) */}
+              {/* BACKGROUND IMAGE (Top Right - Desktop). Si la canción tiene
+                  imagen propia se muestra esa; si no, el fondo del disco. */}
               <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} />
+                {selectedTrackForLyrics.bgImage ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={selectedTrackForLyrics.bgImage}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover object-center opacity-90"
+                  />
+                ) : (
+                  <BackgroundCrossfade currentBg={currentBg} />
+                )}
               </div>
 
               {/* Sticky Header back button */}
@@ -634,6 +645,11 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                   {/* Scrolling lyrics area */}
                   <div className="text-zinc-300 text-md md:text-md font-medium leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-2xl py-2 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
                     {(() => {
+                      // La letra guardada desde el panel de administración tiene
+                      // prioridad; si no existe, se usan las letras por defecto.
+                      if (selectedTrackForLyrics.lyrics && selectedTrackForLyrics.lyrics.trim()) {
+                        return selectedTrackForLyrics.lyrics;
+                      }
                       switch (selectedTrackForLyrics.title.toLowerCase()) {
                         case "papeles rotos":
                           return `Escribo en el viento palabras sin dueño
