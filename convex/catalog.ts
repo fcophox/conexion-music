@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import type { Id } from "./_generated/dataModel";
 
 // Devuelve el catálogo completo con la misma forma que el tipo Album de la app
 // (id de negocio, tracks anidados y ordenados).
@@ -213,26 +214,54 @@ export const renameTrack = mutation({
   },
 });
 
+// URL temporal de subida al storage de Convex. El navegador sube la imagen
+// directo aquí (evita el límite de body de Vercel y el disco efímero).
+export const generateImageUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => await ctx.storage.generateUploadUrl(),
+});
+
 // Actualiza la imagen de fondo y/o la letra de una canción. Solo modifica los
-// campos presentes en los argumentos; una cadena vacía elimina el valor.
+// campos presentes en los argumentos; una cadena vacía en lyrics elimina la
+// letra. La imagen vive en el storage de Convex: se guarda su URL pública en
+// bgImage y el archivo anterior se borra al reemplazar o quitar.
 export const updateTrackDetails = mutation({
   args: {
     trackId: v.number(),
-    bgImage: v.optional(v.string()),
+    bgImageStorageId: v.optional(v.id("_storage")),
+    removeImage: v.optional(v.boolean()),
     lyrics: v.optional(v.string()),
   },
-  handler: async (ctx, { trackId, bgImage, lyrics }) => {
+  handler: async (ctx, { trackId, bgImageStorageId, removeImage, lyrics }) => {
     const track = await ctx.db
       .query("tracks")
       .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
       .unique();
     if (!track) return { ok: false as const, error: "Canción no encontrada" };
 
-    const patch: { bgImage?: string | undefined; lyrics?: string | undefined } = {};
-    if (bgImage !== undefined) patch.bgImage = bgImage === "" ? undefined : bgImage;
+    const patch: {
+      bgImage?: string | undefined;
+      bgImageStorageId?: Id<"_storage"> | undefined;
+      lyrics?: string | undefined;
+    } = {};
+
+    if (removeImage) {
+      if (track.bgImageStorageId) await ctx.storage.delete(track.bgImageStorageId);
+      patch.bgImage = undefined;
+      patch.bgImageStorageId = undefined;
+    } else if (bgImageStorageId) {
+      const url = await ctx.storage.getUrl(bgImageStorageId);
+      if (!url) return { ok: false as const, error: "Imagen no encontrada en storage" };
+      if (track.bgImageStorageId) await ctx.storage.delete(track.bgImageStorageId);
+      patch.bgImage = url;
+      patch.bgImageStorageId = bgImageStorageId;
+    }
+
     if (lyrics !== undefined) patch.lyrics = lyrics === "" ? undefined : lyrics;
     await ctx.db.patch(track._id, patch);
-    return { ok: true as const };
+
+    const bgImage = removeImage ? undefined : patch.bgImage ?? track.bgImage;
+    return { ok: true as const, bgImage };
   },
 });
 

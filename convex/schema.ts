@@ -32,9 +32,11 @@ export default defineSchema({
     coverGradient: v.string(),
     coverArtDesign: v.string(),
     coverImage: v.optional(v.string()),
-    // Imagen de fondo propia de la canción (URL servida por /api/track-image)
-    // y letra. Ambas se editan desde el panel de administración.
+    // Imagen de fondo propia de la canción y letra. Ambas se editan desde el
+    // panel de administración. La imagen vive en el storage de Convex:
+    // bgImageStorageId es el archivo y bgImage su URL pública.
     bgImage: v.optional(v.string()),
+    bgImageStorageId: v.optional(v.id("_storage")),
     lyrics: v.optional(v.string()),
     sortOrder: v.number(),
   })

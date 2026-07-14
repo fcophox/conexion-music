@@ -1,6 +1,7 @@
 import "server-only";
 import { convex } from "./convex";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import type { Album, AlbumWithStats } from "./catalog-types";
 import { SEED_ALBUMS } from "./seed";
 
@@ -130,13 +131,28 @@ export async function getNextTrackId(): Promise<number> {
   }
 }
 
+export async function generateImageUploadUrl(): Promise<string | null> {
+  try {
+    return await convex.mutation(api.catalog.generateImageUploadUrl, {});
+  } catch (error) {
+    console.error("generateImageUploadUrl error:", error);
+    return null;
+  }
+}
+
 export async function updateTrackDetails(details: {
   trackId: number;
-  bgImage?: string;
+  bgImageStorageId?: string;
+  removeImage?: boolean;
   lyrics?: string;
-}): Promise<{ ok: boolean; error?: string }> {
+}): Promise<{ ok: boolean; bgImage?: string; error?: string }> {
   try {
-    return await convex.mutation(api.catalog.updateTrackDetails, details);
+    return await convex.mutation(api.catalog.updateTrackDetails, {
+      trackId: details.trackId,
+      bgImageStorageId: details.bgImageStorageId as Id<"_storage"> | undefined,
+      removeImage: details.removeImage,
+      lyrics: details.lyrics,
+    });
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

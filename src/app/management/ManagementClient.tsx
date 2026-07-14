@@ -830,6 +830,15 @@ function TrackDetailsDrawer({
   }, [imagePreview]);
 
   const pickImage = (file: File) => {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Formato no soportado. Usa JPG, PNG o WebP.");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      setError("La imagen supera los 8 MB.");
+      return;
+    }
+    setError(null);
     setImageFile(file);
     setImagePreview(URL.createObjectURL(file));
     setRemoveImage(false);
@@ -843,18 +852,34 @@ function TrackDetailsDrawer({
     if (saving || !dirty) return;
     setSaving(true);
     setError(null);
-    const formData = new FormData();
-    formData.append("trackId", String(track.id));
-    formData.append("lyrics", lyrics);
-    if (removeImage) {
-      formData.append("removeImage", "1");
-    } else if (imageFile) {
-      formData.append("image", imageFile);
-    }
     try {
+      // Si hay imagen nueva, subirla directo al storage de Convex (así no
+      // pasa por el disco efímero de Vercel ni por su límite de body).
+      let storageId: string | undefined;
+      if (!removeImage && imageFile) {
+        const urlRes = await fetch("/api/management/image-upload-url", { method: "POST" });
+        if (!urlRes.ok) {
+          setError("No se pudo iniciar la subida de la imagen");
+          return;
+        }
+        const { uploadUrl } = await urlRes.json();
+        const upRes = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": imageFile.type },
+          body: imageFile,
+        });
+        if (!upRes.ok) {
+          setError("Error al subir la imagen");
+          return;
+        }
+        const upData = await upRes.json();
+        storageId = upData.storageId;
+      }
+
       const res = await fetch("/api/management/track-details", {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId: track.id, lyrics, storageId, removeImage }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
