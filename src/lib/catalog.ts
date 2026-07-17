@@ -100,6 +100,17 @@ export async function toggleAlbumStatus(
   }
 }
 
+export async function toggleTrackStatus(
+  trackId: number,
+  disabled: boolean
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.toggleTrackStatus, { trackId, disabled });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function moveTrackToAlbum(
   trackId: number,
   targetAlbumId: string

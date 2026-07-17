@@ -21,6 +21,8 @@ import {
   ImagePlus,
   Trash2,
   FileText,
+  Disc3,
+  ArrowRight,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -313,6 +315,7 @@ function Dashboard({
             <AlbumEditor
               key={`${selected.id}:${selected.tracks.map((t) => t.id).sort((a, b) => a - b).join("-")}`}
               album={selected}
+              allAlbums={albums}
               onSaved={onReload}
             />
           )}
@@ -327,9 +330,11 @@ function Dashboard({
 /* ========================================================================= */
 function AlbumEditor({
   album,
+  allAlbums,
   onSaved,
 }: {
   album: AlbumWithStats;
+  allAlbums: AlbumWithStats[];
   onSaved: () => void;
 }) {
   const [tracks, setTracks] = useState<TrackWithStats[]>(album.tracks);
@@ -350,6 +355,27 @@ function AlbumEditor({
 
   // Drawer de detalles (imagen de fondo + letra)
   const [detailsTrack, setDetailsTrack] = useState<TrackWithStats | null>(null);
+
+  // Habilitar/deshabilitar canción (switch por fila)
+  const [togglingId, setTogglingId] = useState<number | null>(null);
+
+  const toggleTrack = async (track: TrackWithStats) => {
+    if (togglingId !== null) return;
+    setTogglingId(track.id);
+    const res = await fetch("/api/management/track-status", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ trackId: track.id, disabled: !track.disabled }),
+    });
+    if (res.ok) {
+      // Actualizar el estado local (la key del editor no cambia con este toggle)
+      setTracks((prev) =>
+        prev.map((t) => (t.id === track.id ? { ...t, disabled: !track.disabled } : t))
+      );
+      onSaved();
+    }
+    setTogglingId(null);
+  };
 
   const startRename = (track: TrackWithStats) => {
     setEditingId(track.id);
@@ -609,7 +635,7 @@ function AlbumEditor({
       )}
 
       {/* Encabezado de tabla */}
-      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto_auto] items-center gap-2 md:gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
+      <div className="grid grid-cols-[auto_2rem_1fr_auto_auto_auto_auto] items-center gap-2 md:gap-4 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-zinc-500 border-b border-zinc-900">
         <span className="w-5" />
         <span className="text-center">#</span>
         <span>Título</span>
@@ -621,6 +647,7 @@ function AlbumEditor({
           <span className="hidden md:inline">Me gusta</span>
           <HandIcon className="w-3.5 h-3.5 inline md:hidden" />
         </span>
+        <span className="w-9 text-center">Estado</span>
         <span className="w-7" />
       </div>
 
@@ -645,7 +672,7 @@ function AlbumEditor({
                 setDragIndex(null);
                 setOverIndex(null);
               }}
-              className={`group grid grid-cols-[auto_2rem_1fr_auto_auto_auto] items-center gap-2 md:gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
+              className={`group grid grid-cols-[auto_2rem_1fr_auto_auto_auto_auto] items-center gap-2 md:gap-4 px-3 py-2.5 rounded-lg border transition-all ${isDragging
                 ? "opacity-40 border-emerald-500/50 bg-zinc-900"
                 : isOver
                   ? "border-emerald-500 bg-zinc-900/80"
@@ -665,7 +692,7 @@ function AlbumEditor({
               <span className="text-center text-sm font-semibold text-zinc-500">{index + 1}</span>
 
               {/* Título + carátula */}
-              <div className="flex items-center gap-2 md:gap-3 min-w-0">
+              <div className={`flex items-center gap-2 md:gap-3 min-w-0 ${track.disabled ? "opacity-50" : ""}`}>
                 {track.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={track.coverImage.replace('/brand/', '/cd/')} alt="" className="w-9 h-9 rounded object-cover shrink-0" />
@@ -714,6 +741,11 @@ function AlbumEditor({
                     <>
                       <span className="flex items-center gap-2 min-w-0">
                         <span className="text-sm font-semibold text-white truncate">{track.title}</span>
+                        {track.disabled && (
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-zinc-400 bg-zinc-800 rounded px-1.5 py-0.5 shrink-0">
+                            Oculta
+                          </span>
+                        )}
                         <button
                           onClick={() => startRename(track)}
                           className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-500 hover:text-emerald-400 transition-all cursor-pointer shrink-0"
@@ -751,6 +783,23 @@ function AlbumEditor({
                 {track.likes.toLocaleString("es")}
               </div>
 
+              {/* Switch habilitar/deshabilitar en el playlist público */}
+              <div className="w-9 flex items-center justify-center">
+                {togglingId === track.id ? (
+                  <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                ) : (
+                  <button
+                    onClick={() => toggleTrack(track)}
+                    disabled={togglingId !== null}
+                    className={`w-9 h-5 rounded-full transition-colors relative cursor-pointer shrink-0 disabled:opacity-50 ${track.disabled ? "bg-zinc-700" : "bg-emerald-500"}`}
+                    title={track.disabled ? "Oculta en el playlist — clic para habilitar" : "Visible en el playlist — clic para deshabilitar"}
+                    aria-label={`${track.disabled ? "Habilitar" : "Deshabilitar"} ${track.title}`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-transform ${track.disabled ? "translate-x-[3px]" : "translate-x-[19px]"}`} />
+                  </button>
+                )}
+              </div>
+
               {/* Abrir detalles (imagen de fondo + letra) */}
               <button
                 onClick={() => setDetailsTrack(track)}
@@ -769,9 +818,15 @@ function AlbumEditor({
       {detailsTrack && (
         <TrackDetailsDrawer
           track={detailsTrack}
+          albums={allAlbums}
+          currentAlbumId={album.id}
           onClose={() => setDetailsTrack(null)}
           onUpdated={(trackId, patch) => {
             setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, ...patch } : t)));
+            onSaved();
+          }}
+          onMoved={() => {
+            setDetailsTrack(null);
             onSaved();
           }}
         />
@@ -785,12 +840,18 @@ function AlbumEditor({
 /* ========================================================================= */
 function TrackDetailsDrawer({
   track,
+  albums,
+  currentAlbumId,
   onClose,
   onUpdated,
+  onMoved,
 }: {
   track: TrackWithStats;
+  albums: AlbumWithStats[];
+  currentAlbumId: string;
   onClose: () => void;
   onUpdated: (trackId: number, patch: { bgImage?: string; lyrics?: string }) => void;
+  onMoved: () => void;
 }) {
   const [visible, setVisible] = useState(false);
   const [lyrics, setLyrics] = useState(track.lyrics ?? "");
@@ -801,6 +862,35 @@ function TrackDetailsDrawer({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Mover a otro disco
+  const [targetAlbumId, setTargetAlbumId] = useState("");
+  const [moving, setMoving] = useState(false);
+  const [moveError, setMoveError] = useState<string | null>(null);
+  const otherAlbums = albums.filter((a) => a.id !== currentAlbumId);
+
+  const moveTrack = async () => {
+    if (!targetAlbumId || moving) return;
+    setMoving(true);
+    setMoveError(null);
+    try {
+      const res = await fetch("/api/management/move", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId: track.id, targetAlbumId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setMoveError(data.error || "No se pudo mover la canción");
+        return;
+      }
+      onMoved();
+    } catch {
+      setMoveError("Error de red");
+    } finally {
+      setMoving(false);
+    }
+  };
 
   const close = useCallback(() => {
     setVisible(false);
@@ -1016,6 +1106,58 @@ function TrackDetailsDrawer({
               {error}
             </div>
           )}
+
+          {/* Mover a otro disco */}
+          <div className="space-y-3 pt-5 border-t border-zinc-900">
+            <div className="flex items-center gap-2">
+              <Disc3 className="w-4 h-4 text-emerald-400" />
+              <span className="text-sm font-bold text-white">Mover a otro disco</span>
+            </div>
+            <p className="text-xs text-zinc-500">
+              Envía esta canción a otro disco. El cambio se aplica de inmediato y la
+              canción queda al final del disco destino.
+            </p>
+            <div className="flex items-center gap-2">
+              <select
+                value={targetAlbumId}
+                disabled={moving || otherAlbums.length === 0}
+                onChange={(e) => {
+                  setTargetAlbumId(e.target.value);
+                  setMoveError(null);
+                }}
+                className="flex-1 min-w-0 bg-zinc-900 border border-zinc-800 text-zinc-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <option value="">Selecciona un disco…</option>
+                {otherAlbums.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title}
+                    {a.disabled ? " (Pronto)" : ""}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={moveTrack}
+                disabled={!targetAlbumId || moving}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg font-bold text-sm transition-all shrink-0 ${targetAlbumId && !moving
+                  ? "bg-emerald-500 hover:bg-emerald-400 text-black cursor-pointer"
+                  : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
+                  }`}
+              >
+                {moving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
+                Mover
+              </button>
+            </div>
+            {moveError && (
+              <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {moveError}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

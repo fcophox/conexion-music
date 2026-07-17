@@ -38,6 +38,8 @@ export default defineSchema({
     bgImage: v.optional(v.string()),
     bgImageStorageId: v.optional(v.id("_storage")),
     lyrics: v.optional(v.string()),
+    // Una pista deshabilitada no aparece en el playlist público; sí en el panel.
+    disabled: v.optional(v.boolean()),
     sortOrder: v.number(),
   })
     .index("by_albumId", ["albumId"])

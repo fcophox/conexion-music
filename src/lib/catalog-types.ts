@@ -14,6 +14,8 @@ export interface Track {
   // del disco. La letra también es opcional (hay letras por defecto en el home).
   bgImage?: string;
   lyrics?: string;
+  // Una canción deshabilitada no aparece en el playlist público (sí en el panel).
+  disabled?: boolean;
 }
 
 export interface Album {

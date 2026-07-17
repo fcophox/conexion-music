@@ -42,6 +42,7 @@ export const getCatalog = query({
             coverImage: t.coverImage,
             bgImage: t.bgImage,
             lyrics: t.lyrics,
+            disabled: t.disabled,
           })),
         };
       })
@@ -115,6 +116,19 @@ export const toggleAlbumStatus = mutation({
       .unique();
     if (!album) return { ok: false as const, error: "Álbum no encontrado" };
     await ctx.db.patch(album._id, { disabled });
+    return { ok: true as const };
+  },
+});
+
+export const toggleTrackStatus = mutation({
+  args: { trackId: v.number(), disabled: v.boolean() },
+  handler: async (ctx, { trackId, disabled }) => {
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
+      .unique();
+    if (!track) return { ok: false as const, error: "Canción no encontrada" };
+    await ctx.db.patch(track._id, { disabled });
     return { ok: true as const };
   },
 });
