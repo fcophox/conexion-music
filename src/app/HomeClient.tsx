@@ -67,7 +67,7 @@ function BackgroundCrossfade({ currentBg }: { currentBg: string }) {
           key={bg}
           src={bg}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover object-[right_top] transition-opacity duration-700 ease-in-out pointer-events-none ${bg === currentBg ? 'opacity-90' : 'opacity-0'
+          className={`absolute inset-0 w-full h-full object-cover object-[right_top] transition-opacity duration-700 ease-in-out pointer-events-none ${bg === currentBg ? 'opacity-100' : 'opacity-0'
             }`}
         />
       ))}
@@ -565,7 +565,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                   <img
                     src={selectedTrackForLyrics.bgImage}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-cover object-[right_top] opacity-90"
+                    className="absolute inset-0 w-full h-full object-cover object-[right_top] opacity-100"
                   />
                 ) : (
                   <BackgroundCrossfade currentBg={currentBg} />
