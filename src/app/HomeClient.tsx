@@ -67,7 +67,7 @@ function BackgroundCrossfade({ currentBg }: { currentBg: string }) {
           key={bg}
           src={bg}
           alt=""
-          className={`absolute inset-0 w-full h-full object-cover object-center transition-opacity duration-700 ease-in-out pointer-events-none ${bg === currentBg ? 'opacity-90' : 'opacity-0'
+          className={`absolute inset-0 w-full h-full object-cover object-[right_top] transition-opacity duration-700 ease-in-out pointer-events-none ${bg === currentBg ? 'opacity-90' : 'opacity-0'
             }`}
         />
       ))}
@@ -559,13 +559,13 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
               {/* BACKGROUND IMAGE (Top Right - Desktop). Si la canción tiene
                   imagen propia se muestra esa; si no, el fondo del disco. */}
-              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
                 {selectedTrackForLyrics.bgImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={selectedTrackForLyrics.bgImage}
                     alt=""
-                    className="absolute inset-0 w-full h-full object-cover object-center opacity-90"
+                    className="absolute inset-0 w-full h-full object-cover object-[right_top] opacity-90"
                   />
                 ) : (
                   <BackgroundCrossfade currentBg={currentBg} />
@@ -764,7 +764,7 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none z-0 hidden md:block">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
                 <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
@@ -876,7 +876,7 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 w-full pb-28 md:pb-32">
 
               {/* BACKGROUND IMAGE (Top Right) */}
-              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
                 <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
@@ -990,7 +990,7 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 flex flex-col w-full">
 
               {/* BACKGROUND IMAGE (Top Right) */}
-              <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10 hidden md:block">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 hidden md:block [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
                 <BackgroundCrossfade currentBg={currentBg} />
               </div>
 
