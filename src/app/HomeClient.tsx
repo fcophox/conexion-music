@@ -586,23 +586,23 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
               </div>
 
               {/* Main Content Layout */}
-              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 py-8 relative z-20 flex flex-col lg:flex-row gap-8 lg:gap-16 pb-44">
+              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 py-4 md:py-6 lg:py-[clamp(1rem,3vh,2rem)] relative z-20 flex flex-col lg:flex-row gap-6 lg:gap-12 pb-28 md:pb-32">
 
-                {/* Left Column: Big Cover and Info */}
-                <div className="w-full lg:w-[320px] xl:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
-                  <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-[300px] lg:h-[300px] xl:w-[380px] xl:h-[380px] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                {/* Left Column: Cover and Info */}
+                <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 md:space-y-5">
+                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,28vh,300px)] lg:h-[clamp(220px,28vh,300px)] xl:w-[clamp(260px,34vh,360px)] xl:h-[clamp(260px,34vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                     {renderCoverArt(selectedTrackForLyrics.coverArtDesign, selectedTrackForLyrics.coverGradient, "w-full h-full", selectedTrackForLyrics.coverImage)}
                   </div>
 
-                  <div className="space-y-2 w-full">
+                  <div className="space-y-1.5 w-full">
                     <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Letra</span>
-                    <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold text-white leading-tight">{selectedTrackForLyrics.title}</h1>
-                    <p className="text-zinc-400 text-base">por <span className="text-white font-bold">{selectedTrackForLyrics.artist}</span></p>
-                    <p className="text-zinc-500 text-sm italic">Álbum: {selectedTrackForLyrics.album}</p>
+                    <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-semibold text-white leading-tight">{selectedTrackForLyrics.title}</h1>
+                    <p className="text-zinc-400 text-sm md:text-base">por <span className="text-white font-bold">{selectedTrackForLyrics.artist}</span></p>
+                    <p className="text-zinc-500 text-xs md:text-sm italic">Álbum: {selectedTrackForLyrics.album}</p>
                   </div>
 
                   {/* Direct Play/Pause in Lyric view */}
-                  <div className="pt-2">
+                  <div className="pt-1">
                     <button
                       onClick={() => {
                         const album = albums.find(a => a.tracks.some(t => t.id === selectedTrackForLyrics.id));
@@ -619,16 +619,16 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                           }
                         }
                       }}
-                      className="flex items-center gap-3 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-full transition-all hover:scale-105 shadow-lg shadow-emerald-500/25 cursor-pointer"
+                      className="flex items-center gap-3 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm md:text-base rounded-full transition-all hover:scale-105 shadow-lg shadow-emerald-500/25 cursor-pointer"
                     >
                       {currentTrack && currentTrack.id === selectedTrackForLyrics.id && isPlaying ? (
                         <>
-                          <Pause className="w-5 h-5 fill-current text-black" />
+                          <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current text-black" />
                           <span>Pausar canción</span>
                         </>
                       ) : (
                         <>
-                          <Play className="w-5 h-5 text-black" />
+                          <Play className="w-4 h-4 md:w-5 md:h-5 text-black" />
                           <span>Reproducir ahora</span>
                         </>
                       )}
@@ -637,13 +637,13 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                 </div>
 
                 {/* Right Column: Full Lyrics */}
-                <div className="flex-1 w-full space-y-6">
-                  <div className="border-b border-zinc-800 pb-4">
-                    <h2 className="text-2xl font-bold text-white">Letra</h2>
+                <div className="flex-1 w-full space-y-4 md:space-y-6">
+                  <div className="border-b border-zinc-800 pb-3">
+                    <h2 className="text-xl md:text-2xl font-bold text-white">Letra</h2>
                   </div>
 
                   {/* Scrolling lyrics area */}
-                  <div className="text-zinc-300 text-md md:text-md font-medium leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-2xl py-2 max-h-[60vh] overflow-y-auto pr-4 custom-scrollbar">
+                  <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-2xl py-2 max-h-[clamp(240px,48vh,600px)] overflow-y-auto pr-4 custom-scrollbar">
                     {(() => {
                       // La letra guardada desde el panel de administración tiene
                       // prioridad; si no existe, se usan las letras por defecto.
@@ -782,11 +782,11 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Header section with logo */}
-              <div className="relative max-w-[1400px] w-full mx-auto px-4 md:px-12 lg:px-16 xl:px-20 pt-10 pb-12 space-y-12 z-10">
-                <div className="flex flex-col items-center text-center space-y-6">
-                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-14 w-auto drop-shadow-lg" />
+              <div className="relative max-w-[1400px] w-full mx-auto px-4 md:px-12 lg:px-16 xl:px-20 pt-6 md:pt-8 pb-8 space-y-6 md:space-y-8 z-10">
+                <div className="flex flex-col items-center text-center space-y-4 md:space-y-6">
+                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-10 md:h-12 lg:h-14 w-auto drop-shadow-lg" />
                   <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sobre conexión</span>
-                  <p className="text-zinc-300 text-base md:text-lg leading-relaxed max-w-3xl mx-auto">
+                  <p className="text-zinc-300 text-sm md:text-base lg:text-lg leading-relaxed max-w-3xl mx-auto">
                     Conexión es un proyecto grunge/post-grunge nacido desde el caos mental, la ansiedad y la necesidad de convertir heridas en canciones. Durante la pandemia en Chile, el músico volvió a componer y se reencontró con letras antiguas escritas cuando era un niño confundido, perturbado y sin entender lo que le pasaba. Desde entonces, ha ido depurando canciones nuevas y viejas, conectando historias, símbolos y mensajes ocultos entre discos conceptuales que, pieza por pieza, construyen una gran narrativa de dolor, desgaste, despertar y renacimiento.
                   </p>
                 </div>
@@ -795,31 +795,31 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Albums blocks */}
-              <div className="w-full flex flex-col gap-24 pb-44 z-10">
+              <div className="w-full flex flex-col gap-12 md:gap-16 lg:gap-20 pb-28 md:pb-32 z-10">
                 {albums.map((album, index) => (
-                  <div key={album.id} className="w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative flex flex-col lg:flex-row gap-8 lg:gap-16">
-                    {/* Left Column: Big Cover and Info */}
-                    <div className="w-full lg:w-[320px] xl:w-[400px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-6">
-                      <div className="w-64 h-64 sm:w-80 sm:h-80 lg:w-[300px] lg:h-[300px] xl:w-[380px] xl:h-[380px] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
+                  <div key={album.id} className="w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative flex flex-col lg:flex-row gap-6 lg:gap-12">
+                    {/* Left Column: Cover and Info */}
+                    <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4">
+                      <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,26vh,300px)] lg:h-[clamp(220px,26vh,300px)] xl:w-[clamp(260px,32vh,360px)] xl:h-[clamp(260px,32vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
                         {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
                       </div>
 
-                      <div className="space-y-2 w-full">
+                      <div className="space-y-1.5 w-full">
                         <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">{album.year}</span>
-                        <h2 className="text-3xl sm:text-4xl font-black text-white leading-tight">{album.disabled ? `Disco ${index + 1}` : album.title}</h2>
+                        <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">{album.disabled ? `Disco ${index + 1}` : album.title}</h2>
                         {album.disabled && (
-                          <span className="inline-block mt-2 bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
+                          <span className="inline-block mt-1.5 bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
                         )}
                       </div>
                     </div>
 
                     {/* Right Column: Full Description */}
-                    <div className="flex-1 w-full space-y-6">
-                      <div className="border-b border-zinc-800 pb-4">
-                        <h3 className="text-2xl font-bold text-white">Historia del Álbum</h3>
+                    <div className="flex-1 w-full space-y-4">
+                      <div className="border-b border-zinc-800 pb-3">
+                        <h3 className="text-xl md:text-2xl font-bold text-white">Historia del Álbum</h3>
                       </div>
 
-                      <div className="text-zinc-300 text-md md:text-md font-medium leading-loose tracking-wide font-sans select-text max-w-2xl py-2 space-y-4">
+                      <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed tracking-wide font-sans select-text max-w-2xl py-1 space-y-3">
                         {(() => {
                           if (album.id === "cero") {
                             return (
@@ -873,7 +873,7 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             /* HOME PAGE VIEW (Netflix-style hero + Discos row)                          */
             /* ========================================================================= */
-            <div className="relative z-10 w-full pb-44">
+            <div className="relative z-10 w-full pb-28 md:pb-32">
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-4/5 lg:w-[1350px] max-w-full h-[650px] overflow-hidden pointer-events-none -z-10">
@@ -881,11 +881,11 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* ===== NETFLIX-STYLE HERO ===== */}
-              <div className="relative w-full min-h-[300px] md:min-h-[350px] lg:min-h-[400px] flex items-center mb-8">
+              <div className="relative w-full min-h-[clamp(200px,28vh,360px)] flex items-center mb-4 md:mb-[clamp(1rem,3vh,2rem)]">
 
                 {/* CONTENT aligned LEFT */}
-                <div className="relative w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 py-10 md:py-16">
-                  <div className="max-w-xl flex flex-col items-start text-left space-y-6 animate-fade-in">
+                <div className="relative w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 py-6 md:py-[clamp(1.25rem,3.5vh,3rem)]">
+                  <div className="max-w-xl flex flex-col items-start text-left space-y-4 md:space-y-[clamp(0.75rem,2vh,1.25rem)] animate-fade-in">
 
                     {/* Greeting + Logo */}
                     <div className="space-y-1">
@@ -1030,10 +1030,10 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-44">
+              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-28 md:pb-32">
 
                 {/* Album Hero Info */}
-                <div className="relative pt-0 lg:pt-3 pb-6 md:pb-8 flex flex-col lg:flex-row items-center lg:items-end gap-6 md:gap-8 z-10">
+                <div className="relative pt-0 lg:pt-2 pb-4 md:pb-6 flex flex-col lg:flex-row items-center lg:items-end gap-5 md:gap-6 z-10">
 
                   {/* MOBILE FULL WIDTH BACKGROUND COVER */}
                   <div className="absolute top-0 left-0 right-0 md:hidden z-0">
@@ -1046,18 +1046,18 @@ Que viaja directo a tu dirección.`;
                   </div>
 
                   {/* DESKTOP COVER */}
-                  <div className="hidden md:flex md:w-24 md:h-24 lg:w-32 lg:h-32 xl:w-40 xl:h-40 shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
+                  <div className="hidden md:flex md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-[clamp(120px,18vh,160px)] xl:h-[clamp(120px,18vh,160px)] shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
                   {/* ALBUM METADATA */}
-                  <div className="flex-1 text-center lg:text-left space-y-3 md:space-y-4 z-10 px-4 md:px-0 pt-[180px] md:pt-0 w-full relative min-w-0">
+                  <div className="flex-1 text-center lg:text-left space-y-2 md:space-y-3 z-10 px-4 md:px-0 pt-[180px] md:pt-0 w-full relative min-w-0">
                     <span className="text-xs uppercase tracking-widest font-extrabold text-zinc-300 md:text-zinc-400 drop-shadow-md">ÁLBUM</span>
                     <div className="flex flex-col lg:flex-row items-center lg:items-center lg:justify-between gap-2 lg:gap-4 w-full lg:pr-12">
-                      <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
+                      <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
                       <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 lg:h-8 w-auto opacity-80 shrink-0 hidden lg:block" />
                     </div>
-                    <p className="hidden md:block text-zinc-300 md:text-zinc-400 text-sm max-w-2xl leading-relaxed drop-shadow-md mx-auto lg:mx-0">{selectedAlbum.description}</p>
+                    <p className="hidden md:block text-zinc-300 md:text-zinc-400 text-xs md:text-sm max-w-2xl leading-relaxed drop-shadow-md mx-auto lg:mx-0">{selectedAlbum.description}</p>
 
                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 md:gap-3 text-xs drop-shadow-md">
                       <div className="flex items-center gap-1 text-emerald-400 font-bold">
@@ -1076,7 +1076,7 @@ Que viaja directo a tu dirección.`;
 
 
                 {/* Track List */}
-                <div className="pb-24 px-4 md:px-0 relative z-10">
+                <div className="pb-16 md:pb-24 px-4 md:px-0 relative z-10">
                   <div className="w-full border-t border-zinc-900 mt-2">
 
                     <div className="grid grid-cols-12 gap-4 py-3 text-zinc-400 text-xs font-bold uppercase tracking-wider px-4 border-b border-zinc-900/60">

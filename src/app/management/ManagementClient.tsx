@@ -191,7 +191,7 @@ function Dashboard({
     <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex">
       {/* Sidebar de álbumes: alto fijo de la pantalla, con scroll interno */}
       <aside className="w-64 lg:w-72 shrink-0 h-full border-r border-zinc-900 bg-zinc-950 flex flex-col">
-        <div className="p-6 border-b border-zinc-900">
+        <div className="p-4 md:p-5 border-b border-zinc-900">
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 w-auto" />
@@ -201,7 +201,7 @@ function Dashboard({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
           <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold px-3 py-2">
             Discos
           </p>
@@ -286,8 +286,8 @@ function Dashboard({
       </aside>
 
       {/* Contenido principal */}
-      <main className="flex-1 overflow-y-auto bg-zinc-950">
-        <div className="max-w-4xl mx-auto p-6 md:p-10 space-y-8">
+      <main className="flex-1 overflow-y-auto bg-zinc-950 custom-scrollbar">
+        <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8">
           {/* Encabezado global */}
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>

@@ -98,6 +98,25 @@ body {
   display: none;
 }
 
+/* Custom scrollbar utility for lyric containers and search */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3f3f46 !important;
+  border-radius: 9999px !important;
+  border: none !important;
+}
 
+/* Adaptación responsiva en alto para pantallas 16:9 y viewports de altura reducida */
+@media (max-height: 820px) {
+  html {
+    font-size: 16px; /* Ajuste suave de escala tipográfica en pantallas de menor alto */
+  }
+}
 
-
+@media (max-height: 700px) {
+  html {
+    font-size: 15px;
+  }
+}
