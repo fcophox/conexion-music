@@ -559,7 +559,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
               {/* BACKGROUND IMAGE (Top Right - Desktop). Si la canción tiene
                   imagen propia se muestra esa; si no, el fondo del disco. */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block">
                 {selectedTrackForLyrics.bgImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -570,6 +570,9 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                 ) : (
                   <BackgroundCrossfade currentBg={currentBg} />
                 )}
+                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
               </div>
 
               {/* Sticky Header back button */}
@@ -764,8 +767,11 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block">
                 <BackgroundCrossfade currentBg={currentBg} />
+                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
               </div>
 
               {/* Sticky Header back button */}
@@ -876,8 +882,11 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 w-full pb-28 md:pb-32">
 
               {/* BACKGROUND IMAGE (Top Right) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10">
                 <BackgroundCrossfade currentBg={currentBg} />
+                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
               </div>
 
               {/* ===== NETFLIX-STYLE HERO ===== */}
@@ -990,8 +999,11 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 flex flex-col w-full">
 
               {/* BACKGROUND IMAGE (Top Right) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 hidden md:block [mask-image:radial-gradient(ellipse_at_top_right,black_50%,transparent_100%)]">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 hidden md:block">
                 <BackgroundCrossfade currentBg={currentBg} />
+                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
+                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
               </div>
 
               {/* Sticky Header Controls & Summary Bar */}
