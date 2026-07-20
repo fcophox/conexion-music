@@ -1,0 +1,350 @@
+import { NextRequest, NextResponse } from "next/server";
+import { checkPassword, newSessionToken, MGMT_COOKIE, isAuthenticated } from "@/lib/management";
+import {
+  getCatalog,
+  getCatalogWithStats,
+  getNextTrackId,
+  addTrack,
+  moveTrackToAlbum,
+  reorderAlbumTracks,
+  renameTrack,
+  toggleAlbumStatus,
+  toggleTrackStatus,
+  updateTrackDetails,
+  generateImageUploadUrl,
+} from "@/lib/catalog";
+import { execFileSync } from "node:child_process";
+import { writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import path from "node:path";
+
+const ALLOWED_EXTENSIONS = new Set([".mp3", ".wav", ".flac", ".m4a", ".aac", ".ogg"]);
+
+function titleFromFilename(filename: string): string {
+  return filename
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase());
+}
+
+function getDuration(filePath: string): number {
+  try {
+    const out = execFileSync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", filePath],
+      { encoding: "utf-8" }
+    );
+    return Math.round(parseFloat(out.trim()) || 0);
+  } catch {
+    return 0;
+  }
+}
+
+type RouteContext = {
+  params: Promise<{ action: string[] }>;
+};
+
+// GET router
+export async function GET(request: NextRequest, ctx: RouteContext) {
+  const { action } = await ctx.params;
+  const endpoint = action.join("/");
+
+  if (endpoint === "catalog") {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const albums = await getCatalogWithStats();
+    return NextResponse.json(
+      { albums },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  return NextResponse.json({ error: "not found" }, { status: 404 });
+}
+
+// POST router
+export async function POST(request: NextRequest, ctx: RouteContext) {
+  const { action } = await ctx.params;
+  const endpoint = action.join("/");
+
+  if (endpoint === "login") {
+    let password = "";
+    try {
+      const body = await request.json();
+      password = typeof body?.password === "string" ? body.password : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const isValid = await checkPassword(password);
+    if (!isValid) {
+      return NextResponse.json({ error: "invalid" }, { status: 401 });
+    }
+
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(MGMT_COOKIE, newSessionToken(), {
+      httpOnly: true,
+      sameSite: "strict",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 8 * 60 * 60,
+    });
+    return response;
+  }
+
+  if (endpoint === "logout") {
+    const response = NextResponse.json({ ok: true });
+    response.cookies.set(MGMT_COOKIE, "", { path: "/", maxAge: 0 });
+    return response;
+  }
+
+  // All subsequent POST endpoints require authentication
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  if (endpoint === "image-upload-url") {
+    const uploadUrl = await generateImageUploadUrl();
+    if (!uploadUrl) {
+      return NextResponse.json({ error: "No se pudo generar la URL de subida" }, { status: 500 });
+    }
+    return NextResponse.json({ uploadUrl });
+  }
+
+  if (endpoint === "track-details") {
+    let body: { trackId?: unknown; lyrics?: unknown; storageId?: unknown; removeImage?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const trackId = Number(body.trackId);
+    if (!Number.isInteger(trackId) || trackId <= 0) {
+      return NextResponse.json({ error: "trackId inválido" }, { status: 400 });
+    }
+
+    const lyrics = typeof body.lyrics === "string" ? body.lyrics.trim() : undefined;
+    const storageId =
+      typeof body.storageId === "string" && body.storageId ? body.storageId : undefined;
+    const removeImage = body.removeImage === true;
+
+    const result = await updateTrackDetails({
+      trackId,
+      lyrics,
+      bgImageStorageId: storageId,
+      removeImage,
+    });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, bgImage: result.bgImage, lyrics });
+  }
+
+  if (endpoint === "upload") {
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const file = formData.get("file") as File | null;
+    const albumId = formData.get("albumId") as string | null;
+
+    if (!file || !albumId) {
+      return NextResponse.json({ error: "file and albumId required" }, { status: 400 });
+    }
+
+    const catalog = await getCatalog();
+    const album = catalog.find((a) => a.id === albumId);
+    if (!album) {
+      return NextResponse.json({ error: "album not found" }, { status: 404 });
+    }
+
+    const trackId = await getNextTrackId();
+    const root = process.cwd();
+    const rawExt = path.extname(file.name).toLowerCase();
+    const ext = ALLOWED_EXTENSIONS.has(rawExt) ? rawExt : null;
+    if (!ext) {
+      return NextResponse.json(
+        { error: `Formato no soportado. Usa: ${[...ALLOWED_EXTENSIONS].join(", ")}` },
+        { status: 400 }
+      );
+    }
+    const masterDir = path.join(root, "media", "masters");
+    mkdirSync(masterDir, { recursive: true });
+    const masterPath = path.join(masterDir, `${trackId}${ext}`);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      writeFileSync(masterPath, Buffer.from(arrayBuffer));
+      const duration = getDuration(masterPath);
+
+      const scriptPath = [root, "scripts", "protect-audio.mjs"].join(path.sep);
+      execFileSync("node", [scriptPath, masterPath, String(trackId)], {
+        stdio: "pipe",
+        cwd: root,
+      });
+
+      const existingTracks = album.tracks.length;
+      const title = titleFromFilename(file.name);
+      const result = await addTrack({
+        trackId,
+        albumId,
+        title,
+        artist: album.artist,
+        album: album.title,
+        duration,
+        coverGradient: album.coverGradient,
+        coverArtDesign: album.coverArtDesign as string,
+        coverImage: album.coverImage,
+        sortOrder: existingTracks,
+      });
+
+      if (!result.ok) {
+        return NextResponse.json({ error: result.error }, { status: 500 });
+      }
+
+      return NextResponse.json({ ok: true, trackId, title, duration });
+    } catch (err) {
+      console.error("Upload error:", err);
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "unknown error" },
+        { status: 500 }
+      );
+    } finally {
+      if (existsSync(masterPath)) {
+        rmSync(masterPath, { force: true });
+      }
+    }
+  }
+
+  return NextResponse.json({ error: "not found" }, { status: 404 });
+}
+
+// PUT router
+export async function PUT(request: NextRequest, ctx: RouteContext) {
+  const { action } = await ctx.params;
+  const endpoint = action.join("/");
+
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  if (endpoint === "move") {
+    let trackId = 0;
+    let targetAlbumId = "";
+    try {
+      const body = await request.json();
+      trackId = typeof body?.trackId === "number" ? body.trackId : 0;
+      targetAlbumId = typeof body?.targetAlbumId === "string" ? body.targetAlbumId : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!trackId || !targetAlbumId) {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const result = await moveTrackToAlbum(trackId, targetAlbumId);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "order") {
+    let albumId = "";
+    let trackIds: number[] = [];
+    try {
+      const body = await request.json();
+      albumId = typeof body?.albumId === "string" ? body.albumId : "";
+      trackIds = Array.isArray(body?.trackIds)
+        ? body.trackIds.map(Number).filter((n: number) => Number.isInteger(n))
+        : [];
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!albumId || trackIds.length === 0) {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const result = await reorderAlbumTracks(albumId, trackIds);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "rename") {
+    let trackId = 0;
+    let title = "";
+    try {
+      const body = await request.json();
+      trackId = typeof body?.trackId === "number" ? body.trackId : 0;
+      title = typeof body?.title === "string" ? body.title.trim() : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!trackId || !title || title.length > 120) {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const result = await renameTrack(trackId, title);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "status") {
+    let albumId = "";
+    let disabled = false;
+    try {
+      const body = await request.json();
+      albumId = typeof body?.albumId === "string" ? body.albumId : "";
+      disabled = Boolean(body?.disabled);
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!albumId) {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const result = await toggleAlbumStatus(albumId, disabled);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "track-status") {
+    let trackId = 0;
+    let disabled: boolean | null = null;
+    try {
+      const body = await request.json();
+      trackId = typeof body?.trackId === "number" ? body.trackId : 0;
+      disabled = typeof body?.disabled === "boolean" ? body.disabled : null;
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!trackId || disabled === null) {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const result = await toggleTrackStatus(trackId, disabled);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  return NextResponse.json({ error: "not found" }, { status: 404 });
+}

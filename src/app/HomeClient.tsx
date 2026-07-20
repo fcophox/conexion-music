@@ -538,8 +538,6 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
           onScroll={handleScroll}
           className="flex-1 flex flex-col bg-zinc-950 overflow-y-auto relative"
         >
-
-
           {selectedTrackForLyrics !== null ? (
             /* ========================================================================= */
             /* SONG LYRICS VIEW                                                          */
@@ -570,9 +568,9 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
                 ) : (
                   <BackgroundCrossfade currentBg={currentBg} />
                 )}
-                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
+                {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
+                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
+                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
               </div>
 
               {/* Sticky Header back button */}
@@ -769,9 +767,9 @@ Que viaja directo a tu dirección.`;
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block">
                 <BackgroundCrossfade currentBg={currentBg} />
-                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
+                {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
+                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
+                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
               </div>
 
               {/* Sticky Header back button */}
@@ -884,9 +882,9 @@ Que viaja directo a tu dirección.`;
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10">
                 <BackgroundCrossfade currentBg={currentBg} />
-                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
+                {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
+                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
+                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
               </div>
 
               {/* ===== NETFLIX-STYLE HERO ===== */}
@@ -1001,9 +999,9 @@ Que viaja directo a tu dirección.`;
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 hidden md:block">
                 <BackgroundCrossfade currentBg={currentBg} />
-                {/* Degradados de difuminado (izquierdo y inferior) hacia el fondo */}
-                <div className="absolute inset-0 bg-gradient-to-r from-zinc-950 via-zinc-950/70 to-transparent z-10" />
-                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent z-10" />
+                {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
+                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
+                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
               </div>
 
               {/* Sticky Header Controls & Summary Bar */}
@@ -1273,14 +1271,14 @@ Que viaja directo a tu dirección.`;
                     }
                   }}
                   className={`hover:scale-110 transition-transform cursor-pointer shrink-0 ml-2 ${(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes
-                      ? 'text-yellow-500'
-                      : 'hover:text-yellow-500'
+                    ? 'text-yellow-500'
+                    : 'hover:text-yellow-500'
                     }`}
                   title={(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes ? "Te gusta" : "Dar me gusta"}
                 >
                   <HandIcon className={`w-4 h-4 ${(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes
-                      ? 'text-yellow-500'
-                      : ''
+                    ? 'text-yellow-500'
+                    : ''
                     }`} />
                 </button>
               )}

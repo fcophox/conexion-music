@@ -15,9 +15,13 @@ const CONTENT_TYPES: Record<string, string> = {
   ".webp": "image/webp",
 };
 
+type RouteContext = {
+  params: Promise<{ trackId: string }>;
+};
+
 export async function GET(
   _request: NextRequest,
-  ctx: RouteContext<"/api/track-image/[trackId]">
+  ctx: RouteContext
 ) {
   const { trackId } = await ctx.params;
   if (!/^\d+$/.test(trackId)) {
