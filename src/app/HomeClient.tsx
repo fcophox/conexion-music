@@ -1189,7 +1189,7 @@ Que viaja directo a tu dirección.`;
 
         {/* GLOBAL PLAYER BAR (full width, compact on mobile, full controls on desktop) */}
         <div className="fixed bottom-16 md:bottom-20 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 z-50 shadow-lg shadow-black/40">
-          <div className="flex items-center justify-between px-3 md:px-8 lg:px-12 h-14 md:h-[76px] gap-4 max-w-[1400px] mx-auto">
+          <div className="flex items-center justify-between px-4 md:px-12 lg:px-16 xl:px-20 h-14 md:h-[76px] gap-4 max-w-[1400px] mx-auto w-full">
 
             {/* Track info */}
             <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none md:w-1/4">
