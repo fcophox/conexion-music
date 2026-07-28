@@ -8,7 +8,7 @@ export const getCatalog = query({
   args: {},
   handler: async (ctx) => {
     const albums = await ctx.db.query("albums").collect();
-    albums.sort((a, b) => a.sortOrder - b.sortOrder);
+    albums.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
     return Promise.all(
       albums.map(async (a) => {
@@ -16,10 +16,10 @@ export const getCatalog = query({
           .query("tracks")
           .withIndex("by_albumId", (q) => q.eq("albumId", a.albumId))
           .collect();
-        tracks.sort((t1, t2) => t1.sortOrder - t2.sortOrder);
+        tracks.sort((t1, t2) => (t1.sortOrder ?? 0) - (t2.sortOrder ?? 0));
 
         return {
-          id: a.albumId,
+          id: a.albumId || String(a._id),
           title: a.title,
           artist: a.artist,
           description: a.description,
@@ -106,6 +106,64 @@ export const reorderTracks = mutation({
     return { ok: true as const };
   },
 });
+
+export const reorderAlbums = mutation({
+  args: { orderedAlbumIds: v.array(v.string()) },
+  handler: async (ctx, { orderedAlbumIds }) => {
+    const allAlbums = await ctx.db.query("albums").collect();
+    for (let i = 0; i < orderedAlbumIds.length; i++) {
+      const targetId = orderedAlbumIds[i];
+      const album = allAlbums.find((a) => a.albumId === targetId || String(a._id) === targetId);
+      if (album) {
+        await ctx.db.patch(album._id, { sortOrder: i });
+      }
+    }
+    return { ok: true as const };
+  },
+});
+
+export const createAlbum = mutation({
+  args: {
+    title: v.string(),
+    coverImage: v.optional(v.string()),
+  },
+  handler: async (ctx, { title, coverImage }) => {
+    const allAlbums = await ctx.db.query("albums").collect();
+    const sortOrder = allAlbums.length;
+
+    // Generate a slug from the title
+    const slug = title
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      || `album-${Date.now()}`;
+
+    // Ensure uniqueness
+    const existing = allAlbums.find((a) => a.albumId === slug);
+    const albumId = existing ? `${slug}-${Date.now()}` : slug;
+
+    await ctx.db.insert("albums", {
+      albumId,
+      title,
+      artist: "conexión",
+      description: "",
+      creator: "conexión",
+      tracksCount: "0 canciones",
+      durationText: "0 min",
+      coverGradient: "from-zinc-800 to-black",
+      coverArtDesign: "image",
+      coverImage: coverImage ?? "/cd/cover_cover_conexion.png",
+      year: new Date().getFullYear(),
+      disabled: true,
+      sortOrder,
+    });
+
+    return { ok: true as const, albumId };
+  },
+});
+
 
 export const toggleAlbumStatus = mutation({
   args: { albumId: v.string(), disabled: v.boolean() },
@@ -301,3 +359,59 @@ export const deleteAlbumTracks = mutation({
     return { ok: true as const, deleted: tracks.length };
   },
 });
+
+export const updateAlbumDetails = mutation({
+  args: {
+    albumId: v.string(),
+    title: v.optional(v.string()),
+    coverStorageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, { albumId, title, coverStorageId }) => {
+    const album = await ctx.db
+      .query("albums")
+      .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+      .unique();
+    if (!album) return { ok: false as const, error: "Álbum no encontrado" };
+
+    const patch: { title?: string; coverImage?: string } = {};
+
+    if (title !== undefined) {
+      const clean = title.trim();
+      if (!clean || clean.length > 120) {
+        return { ok: false as const, error: "Título inválido (1–120 caracteres)" };
+      }
+      patch.title = clean;
+
+      // Actualizar el nombre del álbum en sus pistas
+      const tracks = await ctx.db
+        .query("tracks")
+        .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+        .collect();
+      for (const t of tracks) {
+        await ctx.db.patch(t._id, { album: clean });
+      }
+    }
+
+    if (coverStorageId) {
+      const url = await ctx.storage.getUrl(coverStorageId);
+      if (!url) return { ok: false as const, error: "Imagen no encontrada en storage" };
+      patch.coverImage = url;
+
+      // Actualizar la carátula de las canciones de este álbum
+      const tracks = await ctx.db
+        .query("tracks")
+        .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+        .collect();
+      for (const t of tracks) {
+        await ctx.db.patch(t._id, { coverImage: url });
+      }
+    }
+
+    if (Object.keys(patch).length > 0) {
+      await ctx.db.patch(album._id, patch);
+    }
+
+    return { ok: true as const, title: patch.title, coverImage: patch.coverImage };
+  },
+});
+

@@ -18,11 +18,14 @@ import {
   AlertCircle,
   Pencil,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   ImagePlus,
   Trash2,
   FileText,
   Disc3,
   ArrowRight,
+  Plus,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -173,19 +176,184 @@ function Dashboard({
   albums: AlbumWithStats[];
   onReload: () => void;
 }) {
+  const [localAlbums, setLocalAlbums] = useState<AlbumWithStats[]>(albums);
   const [selectedId, setSelectedId] = useState<string>(albums[0]?.id ?? "");
   const [movingTrack, setMovingTrack] = useState(false);
+  const [reorderingAlbums, setReorderingAlbums] = useState(false);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const selected = albums.find((a) => a.id === selectedId) ?? albums[0];
+  const [draggedAlbumIndex, setDraggedAlbumIndex] = useState<number | null>(null);
+  const [overAlbumIndex, setOverAlbumIndex] = useState<number | null>(null);
+
+  const dragItemIndex = useRef<number | null>(null);
+  const [creatingAlbum, setCreatingAlbum] = useState(false);
+
+  useEffect(() => {
+    setLocalAlbums(albums);
+  }, [albums]);
+
+  const selected = localAlbums.find((a) => a.id === selectedId) ?? localAlbums[0];
 
   const logout = async () => {
     await fetch("/api/management/logout", { method: "POST" });
     location.reload();
   };
 
-  const totalPlays = albums
+  const totalPlays = localAlbums
     .flatMap((a) => a.tracks)
     .reduce((sum, t) => sum + t.plays, 0);
+
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? null : curr));
+    }, 3500);
+  };
+
+  const handleCreateAlbum = async () => {
+    setCreatingAlbum(true);
+    try {
+      const res = await fetch("/api/management/create-album", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "Nuevo Disco" }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        await onReload();
+        if (data.albumId) {
+          setSelectedId(data.albumId);
+        }
+        showToast("Disco creado correctamente");
+      }
+    } catch (err) {
+      console.error("Error al crear disco:", err);
+    } finally {
+      setCreatingAlbum(false);
+    }
+  };
+
+  const moveAlbum = async (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= localAlbums.length) return;
+
+    const updated = [...localAlbums];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+
+    setLocalAlbums(updated);
+
+    setReorderingAlbums(true);
+    try {
+      const res = await fetch("/api/management/order-albums", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumIds: updated.map((a) => a.id) }),
+      });
+      if (res.ok) {
+        onReload();
+        showToast("Orden de discos actualizado correctamente");
+      }
+    } catch (err) {
+      console.error("Error al reordenar discos:", err);
+    } finally {
+      setReorderingAlbums(false);
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, index: number, albumId: string) => {
+    dragItemIndex.current = index;
+    setDraggedAlbumIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", albumId);
+    e.dataTransfer.setData(
+      "application/json",
+      JSON.stringify({ type: "album", albumId, index })
+    );
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number, albumId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+
+    if (dragItemIndex.current !== null) {
+      if (dragItemIndex.current !== index) {
+        setOverAlbumIndex(index);
+      }
+    } else {
+      setDropTargetId(albumId);
+    }
+  };
+
+  const handleDragEnd = () => {
+    dragItemIndex.current = null;
+    setDraggedAlbumIndex(null);
+    setOverAlbumIndex(null);
+    setDropTargetId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number, targetAlbum: AlbumWithStats) => {
+    e.preventDefault();
+    const srcIndex = dragItemIndex.current;
+    handleDragEnd();
+
+    let data: any = null;
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (raw) data = JSON.parse(raw);
+    } catch {}
+
+    const isAlbumDrag = (data && data.type === "album") || srcIndex !== null;
+
+    if (isAlbumDrag) {
+      const fromIndex = srcIndex ?? (data?.index ?? localAlbums.findIndex((a) => a.id === data?.albumId));
+      if (fromIndex !== null && fromIndex !== -1 && fromIndex !== targetIndex) {
+        const updated = [...localAlbums];
+        const [moved] = updated.splice(fromIndex, 1);
+        updated.splice(targetIndex, 0, moved);
+
+        // Actualización optimista inmediata en UI
+        setLocalAlbums(updated);
+
+        setReorderingAlbums(true);
+        try {
+          const res = await fetch("/api/management/order-albums", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ albumIds: updated.map((a) => a.id) }),
+          });
+          if (res.ok) {
+            onReload();
+            showToast("Orden de discos actualizado correctamente");
+          }
+        } catch (err) {
+          console.error("Error al reordenar discos:", err);
+        } finally {
+          setReorderingAlbums(false);
+        }
+      }
+      return;
+    }
+
+    if (data && data.trackId && data.sourceAlbumId && data.sourceAlbumId !== targetAlbum.id) {
+      setMovingTrack(true);
+      setDropTargetId(targetAlbum.id);
+      try {
+        const res = await fetch("/api/management/move", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ trackId: data.trackId, targetAlbumId: targetAlbum.id }),
+        });
+        if (res.ok) {
+          onReload();
+        }
+      } finally {
+        setMovingTrack(false);
+        setDropTargetId(null);
+      }
+    }
+  };
 
   return (
     <div className="h-screen overflow-hidden bg-zinc-950 text-zinc-100 font-sans flex">
@@ -202,76 +370,134 @@ function Dashboard({
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-          <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold px-3 py-2">
-            Discos
-          </p>
-          {albums.map((album) => {
+          <div className="flex items-center justify-between px-3 py-2">
+            <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">
+              Discos
+            </p>
+            <span className="text-[10px] text-zinc-500 font-medium hidden lg:inline">
+              Reordenar
+            </span>
+          </div>
+
+          {localAlbums.map((album, index) => {
             const active = album.id === selectedId;
             const isDropTarget = dropTargetId === album.id;
+            const isAlbumDragging = draggedAlbumIndex === index;
+            const isAlbumOver = overAlbumIndex === index && draggedAlbumIndex !== null && draggedAlbumIndex !== index;
+
             return (
-              <button
+              <div
                 key={album.id}
-                onClick={() => setSelectedId(album.id)}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setDropTargetId(album.id);
-                }}
-                onDragLeave={() => setDropTargetId(null)}
-                onDrop={async (e) => {
-                  e.preventDefault();
-                  try {
-                    const data = JSON.parse(e.dataTransfer.getData('application/json'));
-                    if (data && data.trackId && data.sourceAlbumId && data.sourceAlbumId !== album.id) {
-                      // Mantener dropTargetId durante el fetch para que el loader
-                      // sea visible sobre el álbum destino.
-                      setMovingTrack(true);
-                      const res = await fetch("/api/management/move", {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ trackId: data.trackId, targetAlbumId: album.id }),
-                      });
-                      if (res.ok) {
-                        onReload();
-                      }
-                      setMovingTrack(false);
-                    }
-                  } catch {
-                    // Ignorar datos de arrastre que no son JSON (p.ej. archivos)
-                  } finally {
+                draggable
+                onDragStart={(e) => handleDragStart(e, index, album.id)}
+                onDragOver={(e) => handleDragOver(e, index, album.id)}
+                onDragLeave={() => {
+                  if (dragItemIndex.current === null) {
                     setDropTargetId(null);
                   }
                 }}
-                className={`relative flex items-center gap-3 w-full text-left px-3 py-2 rounded-lg transition-colors cursor-pointer ${
-                  active ? "bg-zinc-900 text-white" : isDropTarget ? "bg-emerald-900/40 border border-emerald-500/50 text-white" : "text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
-                  }`}
+                onDragEnd={handleDragEnd}
+                onDrop={(e) => handleDrop(e, index, album)}
+                className={`group relative flex items-center gap-1.5 w-full px-2 py-2 rounded-lg transition-all border ${
+                  isAlbumDragging
+                    ? "opacity-30 border-dashed border-emerald-500/60 bg-zinc-900"
+                    : isAlbumOver
+                    ? "border-emerald-500 bg-emerald-950/60 text-white scale-[1.02] shadow-lg shadow-emerald-950/50"
+                    : isDropTarget
+                    ? "bg-emerald-900/40 border-emerald-500/50 text-white"
+                    : active
+                    ? "bg-zinc-900 border-zinc-800 text-white"
+                    : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
+                }`}
               >
-                {movingTrack && isDropTarget && (
-                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                    <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-                  </div>
-                )}
-                {album.coverImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={album.coverImage.replace('/brand/', '/cd/')}
-                    alt=""
-                    className="w-9 h-9 rounded object-cover shrink-0"
-                  />
-                ) : (
-                  <div className="w-9 h-9 rounded bg-zinc-800 shrink-0" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold truncate">{album.title}</span>
-                  <span className="block text-xs text-zinc-500 truncate">
-                    {album.tracks.length} canciones
-                  </span>
+                {/* Grab handle icon */}
+                <div
+                  className="cursor-grab active:cursor-grabbing text-zinc-600 group-hover:text-zinc-300 p-0.5 shrink-0 transition-colors select-none"
+                  title="Arrastra para reordenar disco"
+                >
+                  <GripVertical className="w-4 h-4" />
                 </div>
-                {album.disabled && (
-                  <span className="text-[9px] font-bold uppercase text-emerald-400/80">Pronto</span>
-                )}
-              </button>
+
+                <div
+                  onClick={() => setSelectedId(album.id)}
+                  className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer select-none"
+                >
+                  {(movingTrack && isDropTarget) || (reorderingAlbums && isAlbumOver) ? (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-10">
+                      <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                    </div>
+                  ) : null}
+
+                  {album.coverImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={album.coverImage.replace('/brand/', '/cd/')}
+                      alt=""
+                      className="w-9 h-9 rounded object-cover shrink-0 pointer-events-none"
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded bg-zinc-800 shrink-0 pointer-events-none" />
+                  )}
+                  <div className="min-w-0 flex-1 pointer-events-none">
+                    <span className="block text-sm font-semibold truncate">{album.title}</span>
+                    <span className="block text-xs text-zinc-500 truncate">
+                      {album.tracks.length} canciones
+                    </span>
+                  </div>
+                  {album.disabled && (
+                    <span className="text-[9px] font-bold uppercase text-emerald-400/80 pointer-events-none shrink-0">
+                      Pronto
+                    </span>
+                  )}
+                </div>
+
+                {/* Controles rápidos arriba / abajo */}
+                <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveAlbum(index, "up");
+                    }}
+                    disabled={index === 0}
+                    className="p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                    title="Mover arriba"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveAlbum(index, "down");
+                    }}
+                    disabled={index === localAlbums.length - 1}
+                    className="p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                    title="Mover abajo"
+                  >
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
             );
           })}
+
+          {/* Botón Crear Disco */}
+          <button
+            type="button"
+            onClick={handleCreateAlbum}
+            disabled={creatingAlbum}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 mt-2 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:border-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-950/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group/create"
+          >
+            {creatingAlbum ? (
+              <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+            ) : (
+              <div className="w-9 h-9 rounded bg-zinc-800 border border-dashed border-zinc-600 group-hover/create:border-emerald-500/50 flex items-center justify-center shrink-0 transition-colors">
+                <Plus className="w-4 h-4" />
+              </div>
+            )}
+            <span className="text-sm font-semibold">Crear disco</span>
+          </button>
         </nav>
 
         <div className="p-3 border-t border-zinc-900">
@@ -321,6 +547,20 @@ function Dashboard({
           )}
         </div>
       </main>
+
+      {/* Toast de notificación */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-zinc-900/95 border border-emerald-500/50 text-white px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-sm font-semibold">{toastMessage}</span>
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-zinc-500 hover:text-white ml-2 cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -485,26 +725,169 @@ function AlbumEditor({
     }
   };
 
+  // Album cover upload & rename state
+  const albumCoverInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAlbumCover, setUploadingAlbumCover] = useState(false);
+  const [editingAlbumTitle, setEditingAlbumTitle] = useState(false);
+  const [albumTitleInput, setAlbumTitleInput] = useState(album.title);
+  const [savingAlbumTitle, setSavingAlbumTitle] = useState(false);
+
+  const handleSaveAlbumTitle = async () => {
+    const cleanTitle = albumTitleInput.trim();
+    if (!cleanTitle || savingAlbumTitle) return;
+    if (cleanTitle === album.title) {
+      setEditingAlbumTitle(false);
+      return;
+    }
+    setSavingAlbumTitle(true);
+    try {
+      const res = await fetch("/api/management/album-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: album.id, title: cleanTitle }),
+      });
+      if (res.ok) {
+        setEditingAlbumTitle(false);
+        onSaved();
+      }
+    } catch (err) {
+      console.error("Error updating album title:", err);
+    } finally {
+      setSavingAlbumTitle(false);
+    }
+  };
+
+  const handleAlbumCoverChange = async (file: File) => {
+    if (!file || uploadingAlbumCover) return;
+    setUploadingAlbumCover(true);
+    try {
+      const urlRes = await fetch("/api/management/image-upload-url", { method: "POST" });
+      if (!urlRes.ok) return;
+      const { uploadUrl } = await urlRes.json();
+
+      const upRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!upRes.ok) return;
+      const { storageId } = await upRes.json();
+
+      const res = await fetch("/api/management/album-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: album.id, coverStorageId: storageId }),
+      });
+      if (res.ok) {
+        onSaved();
+      }
+    } catch (err) {
+      console.error("Error uploading album cover:", err);
+    } finally {
+      setUploadingAlbumCover(false);
+    }
+  };
+
   return (
     <div className="space-y-5">
       {/* Cabecera del álbum */}
       <div className="flex flex-wrap items-center justify-between gap-5">
-        <div className="flex items-end gap-5">
-          {album.coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={album.coverImage.replace('/brand/', '/cd/')}
-              alt=""
-              className="w-24 h-24 md:w-32 md:h-32 rounded-lg object-cover shadow-xl shrink-0"
+        <div className="flex items-end gap-5 min-w-0 flex-1">
+          {/* Carátula del álbum con hover para reemplazar */}
+          <div className="relative group/cover shrink-0">
+            <input
+              ref={albumCoverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleAlbumCoverChange(e.target.files[0]);
+                  e.target.value = "";
+                }
+              }}
             />
-          ) : (
-            <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-zinc-800 shrink-0" />
-          )}
-          <div className="min-w-0">
+            {album.coverImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={album.coverImage.replace('/brand/', '/cd/')}
+                alt=""
+                className="w-24 h-24 md:w-32 md:h-32 rounded-lg object-cover shadow-xl shrink-0"
+              />
+            ) : (
+              <div className="w-24 h-24 md:w-32 md:h-32 rounded-lg bg-zinc-800 shrink-0" />
+            )}
+            <button
+              onClick={() => albumCoverInputRef.current?.click()}
+              disabled={uploadingAlbumCover}
+              className="absolute inset-0 bg-black/60 opacity-0 group-hover/cover:opacity-100 transition-opacity rounded-lg flex flex-col items-center justify-center gap-1 text-white text-xs font-semibold cursor-pointer"
+              title="Cambiar carátula del disco"
+            >
+              {uploadingAlbumCover ? (
+                <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+              ) : (
+                <>
+                  <ImagePlus className="w-6 h-6" />
+                  <span>Cambiar carátula</span>
+                </>
+              )}
+            </button>
+          </div>
+
+          <div className="min-w-0 flex-1">
             <span className="text-xs uppercase tracking-widest font-bold text-zinc-500">Álbum</span>
-            <h2 className="text-2xl md:text-4xl font-black text-white leading-tight truncate">
-              {album.title}
-            </h2>
+            {editingAlbumTitle ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleSaveAlbumTitle();
+                }}
+                className="flex items-center gap-2 mt-1"
+              >
+                <input
+                  type="text"
+                  value={albumTitleInput}
+                  onChange={(e) => setAlbumTitleInput(e.target.value)}
+                  autoFocus
+                  className="bg-zinc-900 border border-emerald-500 text-white font-black text-xl md:text-3xl rounded-lg px-3 py-1 focus:outline-none w-full max-w-md"
+                />
+                <button
+                  type="submit"
+                  disabled={savingAlbumTitle || !albumTitleInput.trim()}
+                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-black rounded-lg font-bold transition-colors cursor-pointer disabled:opacity-50"
+                  title="Guardar título"
+                >
+                  {savingAlbumTitle ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingAlbumTitle(false);
+                    setAlbumTitleInput(album.title);
+                  }}
+                  className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors cursor-pointer"
+                  title="Cancelar"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </form>
+            ) : (
+              <div className="flex items-center gap-2 group/title">
+                <h2 className="text-2xl md:text-4xl font-black text-white leading-tight truncate">
+                  {album.title}
+                </h2>
+                <button
+                  onClick={() => {
+                    setAlbumTitleInput(album.title);
+                    setEditingAlbumTitle(true);
+                  }}
+                  className="p-1.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                  title="Editar nombre del disco"
+                >
+                  <Pencil className="w-4 h-4" />
+                </button>
+              </div>
+            )}
             <p className="text-zinc-400 text-sm mt-1">
               {album.artist} • {album.year} • {tracks.length} canciones
             </p>

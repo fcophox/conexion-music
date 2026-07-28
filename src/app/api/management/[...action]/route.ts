@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkPassword, newSessionToken, MGMT_COOKIE, isAuthenticated } from "@/lib/management";
+
+export const dynamic = "force-dynamic";
 import {
   getCatalog,
   getCatalogWithStats,
@@ -7,10 +9,13 @@ import {
   addTrack,
   moveTrackToAlbum,
   reorderAlbumTracks,
+  reorderAlbums,
+  createAlbum,
   renameTrack,
   toggleAlbumStatus,
   toggleTrackStatus,
   updateTrackDetails,
+  updateAlbumDetails,
   generateImageUploadUrl,
 } from "@/lib/catalog";
 import { execFileSync } from "node:child_process";
@@ -222,6 +227,26 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     }
   }
 
+  if (endpoint === "create-album") {
+    let title = "";
+    try {
+      const body = await request.json();
+      title = typeof body?.title === "string" ? body.title.trim() : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!title) {
+      return NextResponse.json({ error: "title is required" }, { status: 400 });
+    }
+
+    const result = await createAlbum(title);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, albumId: result.albumId });
+  }
+
   return NextResponse.json({ error: "not found" }, { status: 404 });
 }
 
@@ -278,6 +303,58 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
     return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "order-albums") {
+    let albumIds: string[] = [];
+    let rawBody: any = null;
+    try {
+      rawBody = await request.json();
+      console.log("[DEBUG order-albums] body:", JSON.stringify(rawBody));
+      albumIds = Array.isArray(rawBody?.albumIds)
+        ? rawBody.albumIds.map((id: unknown) => String(id)).filter(Boolean)
+        : [];
+    } catch (e) {
+      console.error("[DEBUG order-albums] JSON error:", e);
+      return NextResponse.json({ error: "bad request: invalid json" }, { status: 400 });
+    }
+
+    if (albumIds.length === 0) {
+      console.error("[DEBUG order-albums] empty albumIds array");
+      return NextResponse.json({ error: "bad request: empty albumIds" }, { status: 400 });
+    }
+
+    const result = await reorderAlbums(albumIds);
+    console.log("[DEBUG order-albums] reorderAlbums result:", result);
+    if (!result.ok) {
+      console.error("[DEBUG order-albums] mutation failed:", result.error);
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "album-details") {
+    let albumId = "";
+    let title: string | undefined;
+    let coverStorageId: any;
+    try {
+      const body = await request.json();
+      albumId = typeof body?.albumId === "string" ? body.albumId : "";
+      title = typeof body?.title === "string" ? body.title : undefined;
+      coverStorageId = typeof body?.coverStorageId === "string" && body.coverStorageId ? body.coverStorageId : undefined;
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!albumId) {
+      return NextResponse.json({ error: "albumId es requerido" }, { status: 400 });
+    }
+
+    const result = await updateAlbumDetails({ albumId, title, coverStorageId });
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, title: result.title, coverImage: result.coverImage });
   }
 
   if (endpoint === "rename") {

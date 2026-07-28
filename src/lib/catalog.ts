@@ -89,6 +89,30 @@ export async function reorderAlbumTracks(
   }
 }
 
+export async function reorderAlbums(
+  orderedAlbumIds: string[]
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await convex.mutation(api.catalog.reorderAlbums, { orderedAlbumIds });
+    return res;
+  } catch (error) {
+    console.error("Convex reorderAlbums mutation error:", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function createAlbum(
+  title: string,
+  coverImage?: string
+): Promise<{ ok: boolean; albumId?: string; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.createAlbum, { title, coverImage });
+  } catch (error) {
+    console.error("Convex createAlbum mutation error:", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 export async function toggleAlbumStatus(
   albumId: string,
   disabled: boolean
@@ -99,6 +123,19 @@ export async function toggleAlbumStatus(
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+export async function updateAlbumDetails(args: {
+  albumId: string;
+  title?: string;
+  coverStorageId?: Id<"_storage">;
+}): Promise<{ ok: boolean; title?: string; coverImage?: string; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.updateAlbumDetails, args);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 
 export async function toggleTrackStatus(
   trackId: number,
