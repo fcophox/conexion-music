@@ -620,17 +620,17 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
               {/* Main Content Layout */}
               <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 py-4 md:py-6 lg:py-[clamp(1rem,3vh,2rem)] relative z-20 flex flex-col lg:flex-row gap-6 lg:gap-12 pb-44 md:pb-52">
 
-                {/* Left Column: Cover and Info */}
-                <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 md:space-y-5">
+                {/* Left Column: Cover and Info (Sticky on scroll) */}
+                <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 md:space-y-5 lg:sticky lg:top-20 lg:self-start">
                   <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,28vh,300px)] lg:h-[clamp(220px,28vh,300px)] xl:w-[clamp(260px,34vh,360px)] xl:h-[clamp(260px,34vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
                     {renderCoverArt(selectedTrackForLyrics.coverArtDesign, selectedTrackForLyrics.coverGradient, "w-full h-full", selectedTrackForLyrics.coverImage)}
                   </div>
 
                   <div className="space-y-1.5 w-full">
                     <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Letra</span>
-                    <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-semibold text-white leading-tight">{selectedTrackForLyrics.title}</h1>
+                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white leading-tight">{selectedTrackForLyrics.title}</h1>
                     <p className="text-zinc-400 text-sm md:text-base">por <span className="text-white font-bold">{selectedTrackForLyrics.artist}</span></p>
-                    <p className="text-zinc-500 text-xs md:text-sm italic">Álbum: {selectedTrackForLyrics.album}</p>
+                    <p className="text-zinc-500 text-xs md:text-sm">Álbum: {selectedTrackForLyrics.album}</p>
                   </div>
 
                   {/* Direct Play/Pause in Lyric view */}
@@ -670,12 +670,9 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
                 {/* Right Column: Full Lyrics */}
                 <div className="flex-1 w-full space-y-4 md:space-y-6">
-                  <div className="border-b border-zinc-800 pb-3">
-                    <h2 className="text-xl md:text-2xl font-bold text-white">Letra</h2>
-                  </div>
 
-                  {/* Scrolling lyrics area */}
-                  <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-2xl py-2 max-h-[clamp(240px,48vh,600px)] overflow-y-auto pr-4 custom-scrollbar">
+                  {/* Lyrics area with vertical scroll when extensive */}
+                  <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-3xl pt-2 pb-24 md:pb-28 max-h-[calc(100vh-220px)] lg:max-h-[calc(100vh-180px)] overflow-y-auto pr-4 custom-scrollbar">
                     {(() => {
                       // La letra guardada desde el panel de administración tiene
                       // prioridad; si no existe, se usan las letras por defecto.
@@ -1206,24 +1203,24 @@ Que viaja directo a tu dirección.`;
 
         </main>
 
-        {/* GLOBAL PLAYER BAR (full width, compact on mobile, full controls on desktop) */}
-        <div className="fixed bottom-16 md:bottom-20 left-0 right-0 bg-zinc-900/95 backdrop-blur-md border-t border-zinc-800 z-50 shadow-lg shadow-black/40">
-          <div className="flex items-center justify-between px-4 md:px-12 lg:px-16 xl:px-20 h-14 md:h-[76px] gap-4 max-w-[1400px] mx-auto w-full">
+        {/* GLOBAL PLAYER BAR (floating glassmorphism pill, max 720px width, separated from bottom nav) */}
+        <div className="fixed bottom-[76px] md:bottom-[96px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5">
+          <div className="flex items-center justify-between h-12 md:h-14 gap-3 md:gap-4 w-full">
 
             {/* Track info */}
-            <div className="flex items-center gap-3 min-w-0 flex-1 md:flex-none md:w-1/4">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
+            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 md:flex-none md:w-[200px] lg:w-[220px] shrink-0">
+              <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
                 {currentTrack ? renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage) : renderCoverArt("", "", "w-full h-full", "/cd/cover_cover_conexion.png")}
               </div>
-              <div className="truncate min-w-0">
+              <div className="truncate min-w-0 pr-1">
                 <span className="block font-bold text-xs md:text-sm truncate text-white">{currentTrack ? currentTrack.title : "--"}</span>
                 <span className="block text-zinc-400 text-[10px] md:text-xs truncate">{currentTrack ? currentTrack.artist : "--"}</span>
               </div>
             </div>
 
             {/* Desktop: transport controls + seek bar */}
-            <div className="hidden md:flex flex-col items-center flex-1 gap-1.5 min-w-0">
-              <div className="flex items-center gap-5">
+            <div className="hidden md:flex flex-col items-center flex-1 gap-1 min-w-0 max-w-[260px] lg:max-w-[280px] mx-auto">
+              <div className="flex items-center gap-4">
                 <button
                   onClick={handlePrev}
                   className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
@@ -1232,12 +1229,12 @@ Que viaja directo a tu dirección.`;
                 </button>
                 <button
                   onClick={handlePlayPause}
-                  className="w-9 h-9 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-all cursor-pointer"
+                  className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 transition-all cursor-pointer shadow-md"
                 >
                   {isPlaying ? (
-                    <Pause className="w-4 h-4 fill-current text-black" />
+                    <Pause className="w-3.5 h-3.5 fill-current text-black" />
                   ) : (
-                    <Play className="w-4 h-4 text-black" />
+                    <Play className="w-3.5 h-3.5 text-black" />
                   )}
                 </button>
                 <button
@@ -1247,23 +1244,23 @@ Que viaja directo a tu dirección.`;
                   <SkipForward className="w-4 h-4 fill-current" />
                 </button>
               </div>
-              <div className="flex items-center gap-2 w-full max-w-md text-[10px] text-zinc-400 font-mono">
-                <span>{formatTime(displayTime)}</span>
+              <div className="flex items-center gap-2 w-full text-[10px] text-zinc-400 font-mono">
+                <span className="shrink-0">{formatTime(displayTime)}</span>
                 <div
                   onClick={handleSeek}
-                  className="flex-1 bg-zinc-800 h-1 rounded-full overflow-hidden cursor-pointer"
+                  className="flex-1 bg-zinc-800/80 h-1 rounded-full overflow-hidden cursor-pointer"
                 >
                   <div
                     className="bg-zinc-100 h-full transition-all duration-300 pointer-events-none"
                     style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
                   />
                 </div>
-                <span>{formatTime(displayDuration)}</span>
+                <span className="shrink-0">{formatTime(displayDuration)}</span>
               </div>
             </div>
 
             {/* Desktop: volume */}
-            <div className="hidden md:flex items-center gap-2 w-1/4 justify-end text-zinc-400 pr-2">
+            <div className="hidden md:flex items-center gap-2 md:w-[160px] lg:w-[180px] shrink-0 justify-end text-zinc-400">
               <button
                 onClick={() => setIsMuted(!isMuted)}
                 className="hover:text-white cursor-pointer shrink-0"
@@ -1279,7 +1276,7 @@ Que viaja directo a tu dirección.`;
                   setVolume(Number(e.target.value));
                   if (isMuted) setIsMuted(false);
                 }}
-                className="w-24 accent-zinc-100 bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
+                className="w-16 lg:w-20 accent-zinc-100 bg-zinc-800 h-1 rounded-lg appearance-none cursor-pointer"
               />
               {currentTrack && (
                 <button
@@ -1289,7 +1286,7 @@ Que viaja directo a tu dirección.`;
                       handleLike(e, currentTrack.id, currentTrack.likes);
                     }
                   }}
-                  className={`hover:scale-110 transition-transform cursor-pointer shrink-0 ml-2 ${(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes
+                  className={`hover:scale-110 transition-transform cursor-pointer shrink-0 ml-1 ${(localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes
                     ? 'text-yellow-500'
                     : 'hover:text-yellow-500'
                     }`}
@@ -1304,7 +1301,7 @@ Que viaja directo a tu dirección.`;
             </div>
 
             {/* Mobile: compact controls */}
-            <div className="flex md:hidden items-center gap-3 shrink-0 pl-2">
+            <div className="flex md:hidden items-center gap-3 shrink-0">
               <button
                 onClick={handlePlayPause}
                 className="w-8 h-8 bg-white text-black rounded-full flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all"
@@ -1325,7 +1322,7 @@ Que viaja directo a tu dirección.`;
           </div>
 
           {/* Mobile: progress bar at the top of the player */}
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-zinc-800 overflow-hidden md:hidden">
+          <div className="absolute top-0 left-10 right-10 h-0.5 bg-zinc-800/80 overflow-hidden md:hidden rounded-full">
             <div
               className="bg-emerald-500 h-full transition-all duration-300"
               style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
