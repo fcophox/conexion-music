@@ -840,22 +840,27 @@ Que viaja directo a tu dirección.`;
                       {(() => {
                         const content = ALBUM_ABOUT_TEXTS[album.id] || ALBUM_ABOUT_TEXTS[slugify(album.title)] || (index === 4 ? ALBUM_ABOUT_TEXTS["blackout"] : undefined);
                         const isExpanded = !!expandedDetails[album.id];
+                        const intro = (album.aboutIntro && album.aboutIntro.trim()) ? album.aboutIntro : content?.intro;
+                        const details = (album.aboutDetails && album.aboutDetails.trim()) ? album.aboutDetails : (content?.details || album.description);
+                        const titleDisplay = album.disabled ? `Disco ${index + 1}` : album.title;
 
                         return (
                           <>
                             <div className="space-y-1">
                               <span className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{album.year}</span>
                               <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                                {content ? content.title : (album.disabled ? `Disco ${index + 1}` : `${album.title} — conexión`)}
+                                {titleDisplay}
                               </h2>
                             </div>
 
                             <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed tracking-wide font-sans select-text max-w-2xl py-1 space-y-3">
-                              {content ? (
+                              {intro && (
+                                <p className="text-zinc-200 font-medium leading-relaxed">
+                                  {intro}
+                                </p>
+                              )}
+                              {details && (
                                 <>
-                                  <p className="text-zinc-200 font-medium leading-relaxed">
-                                    {content.intro}
-                                  </p>
                                   <button
                                     onClick={() => toggleDetails(album.id)}
                                     className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-400 transition-colors cursor-pointer py-1"
@@ -865,12 +870,10 @@ Que viaja directo a tu dirección.`;
                                   </button>
                                   {isExpanded && (
                                     <div className="pt-2 text-zinc-400 text-sm leading-relaxed space-y-3 border-t border-zinc-900/80 animate-fade-in">
-                                      <p>{content.details}</p>
+                                      <p>{details}</p>
                                     </div>
                                   )}
                                 </>
-                              ) : (
-                                <p>{album.description}</p>
                               )}
                             </div>
                           </>

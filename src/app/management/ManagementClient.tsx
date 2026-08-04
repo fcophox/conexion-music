@@ -26,6 +26,7 @@ import {
   Disc3,
   ArrowRight,
   Plus,
+  Settings,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -211,13 +212,23 @@ function Dashboard({
     }, 3500);
   };
 
-  const handleCreateAlbum = async () => {
+  const [showCreateDrawer, setShowCreateDrawer] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createIntro, setCreateIntro] = useState("");
+  const [createDetails, setCreateDetails] = useState("");
+
+  const handleCreateAlbumSubmit = async () => {
+    if (!createTitle.trim() || creatingAlbum) return;
     setCreatingAlbum(true);
     try {
       const res = await fetch("/api/management/create-album", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "Nuevo Disco" }),
+        body: JSON.stringify({
+          title: createTitle.trim(),
+          aboutIntro: createIntro.trim() || undefined,
+          aboutDetails: createDetails.trim() || undefined,
+        }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -225,6 +236,10 @@ function Dashboard({
         if (data.albumId) {
           setSelectedId(data.albumId);
         }
+        setShowCreateDrawer(false);
+        setCreateTitle("");
+        setCreateIntro("");
+        setCreateDetails("");
         showToast("Disco creado correctamente");
       }
     } catch (err) {
@@ -492,17 +507,17 @@ function Dashboard({
           {/* Botón Crear Disco */}
           <button
             type="button"
-            onClick={handleCreateAlbum}
-            disabled={creatingAlbum}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 mt-2 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:border-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-950/30 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed group/create"
+            onClick={() => {
+              setCreateTitle("");
+              setCreateIntro("");
+              setCreateDetails("");
+              setShowCreateDrawer(true);
+            }}
+            className="flex items-center gap-2.5 w-full px-3 py-2.5 mt-2 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:border-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-950/30 transition-all cursor-pointer group/create"
           >
-            {creatingAlbum ? (
-              <Loader2 className="w-5 h-5 animate-spin shrink-0" />
-            ) : (
-              <div className="w-9 h-9 rounded bg-zinc-800 border border-dashed border-zinc-600 group-hover/create:border-emerald-500/50 flex items-center justify-center shrink-0 transition-colors">
-                <Plus className="w-4 h-4" />
-              </div>
-            )}
+            <div className="w-9 h-9 rounded bg-zinc-800 border border-dashed border-zinc-600 group-hover/create:border-emerald-500/50 flex items-center justify-center shrink-0 transition-colors">
+              <Plus className="w-4 h-4" />
+            </div>
             <span className="text-sm font-semibold">Crear disco</span>
           </button>
         </nav>
@@ -569,6 +584,111 @@ function Dashboard({
           </button>
         </div>
       )}
+
+      {/* Drawer para Crear Disco con Intro y Descripción */}
+      {showCreateDrawer && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div
+            className="absolute inset-0 bg-black/65 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => setShowCreateDrawer(false)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-lg bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+
+              <div className="p-6 border-b border-zinc-900 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white">Crear Nuevo Disco</h3>
+                    <p className="text-xs text-zinc-400">Agrega un nuevo álbum a la discografía de Conexión</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreateDrawer(false)}
+                  className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-6 flex-1 overflow-y-auto space-y-6 custom-scrollbar">
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Título del Disco *
+                  </label>
+                  <input
+                    type="text"
+                    value={createTitle}
+                    onChange={(e) => setCreateTitle(e.target.value)}
+                    placeholder="Ej. Blackout"
+                    autoFocus
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Intro del Disco
+                  </label>
+                  <p className="text-xs text-zinc-500">
+                    Texto corto introductorio para la sección &quot;Sobre Conexión&quot;.
+                  </p>
+                  <textarea
+                    rows={4}
+                    value={createIntro}
+                    onChange={(e) => setCreateIntro(e.target.value)}
+                    placeholder="El origen de todas las heridas..."
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors leading-relaxed"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                    Descripción Detallada
+                  </label>
+                  <p className="text-xs text-zinc-500">
+                    Texto explicativo extenso desplegable en &quot;Sobre Conexión&quot;.
+                  </p>
+                  <textarea
+                    rows={8}
+                    value={createDetails}
+                    onChange={(e) => setCreateDetails(e.target.value)}
+                    placeholder="Cero representa el origen del universo de Conexión..."
+                    className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors leading-relaxed"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-zinc-900 bg-zinc-950 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateDrawer(false)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateAlbumSubmit}
+                  disabled={creatingAlbum || !createTitle.trim()}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-full transition-all cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+                >
+                  {creatingAlbum ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4" />
+                  )}
+                  <span>Crear disco</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -605,6 +725,43 @@ function AlbumEditor({
 
   // Drawer de detalles (imagen de fondo + letra)
   const [detailsTrack, setDetailsTrack] = useState<TrackWithStats | null>(null);
+
+  // Drawer de Sobre Conexión (intro y descripción del álbum)
+  const [aboutDrawerOpen, setAboutDrawerOpen] = useState(false);
+  const [aboutIntroInput, setAboutIntroInput] = useState(album.aboutIntro ?? "");
+  const [aboutDetailsInput, setAboutDetailsInput] = useState(album.aboutDetails ?? "");
+  const [savingAbout, setSavingAbout] = useState(false);
+
+  useEffect(() => {
+    setAboutIntroInput(album.aboutIntro ?? "");
+    setAboutDetailsInput(album.aboutDetails ?? "");
+  }, [album.aboutIntro, album.aboutDetails]);
+
+  const handleSaveAbout = async () => {
+    setSavingAbout(true);
+    try {
+      const res = await fetch("/api/management/album-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          albumId: album.id,
+          aboutIntro: aboutIntroInput.trim(),
+          aboutDetails: aboutDetailsInput.trim(),
+        }),
+      });
+      if (res.ok) {
+        setAboutDrawerOpen(false);
+        onSaved();
+      } else {
+        const errBody = await res.text();
+        console.error("Error guardando about:", res.status, errBody);
+      }
+    } catch (err) {
+      console.error("Error al guardar intro y descripción del álbum:", err);
+    } finally {
+      setSavingAbout(false);
+    }
+  };
 
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -853,7 +1010,8 @@ function AlbumEditor({
   };
 
   return (
-    <div className="space-y-5">
+    <>
+      <div className="space-y-5">
       {/* Cabecera del álbum */}
       <div className="flex flex-wrap items-center justify-between gap-5">
         <div className="flex items-end gap-5 min-w-0 flex-1">
@@ -1011,35 +1169,6 @@ function AlbumEditor({
           </div>
         </div>
 
-        {/* Status Toggle & Delete */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
-            <span className="text-sm font-semibold text-zinc-300">Estado: {album.disabled ? 'Bloqueado (Pronto)' : 'Público'}</span>
-            <button
-              onClick={async () => {
-                const res = await fetch("/api/management/status", {
-                  method: "PUT",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ albumId: album.id, disabled: !album.disabled }),
-                });
-                if (res.ok) {
-                  onSaved();
-                }
-              }}
-              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${album.disabled ? 'bg-zinc-700' : 'bg-emerald-500'}`}
-            >
-              <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${album.disabled ? 'translate-x-1' : 'translate-x-6'}`} />
-            </button>
-          </div>
-
-          <button
-            onClick={() => setShowDeleteConfirm(true)}
-            className="flex items-center justify-center p-2.5 bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/50 hover:text-white rounded-xl transition-all cursor-pointer"
-            title="Eliminar disco"
-          >
-            <Trash2 className="w-5 h-5" />
-          </button>
-        </div>
       </div>
 
       {/* Barra de acciones */}
@@ -1062,6 +1191,14 @@ function AlbumEditor({
               }
             }}
           />
+          <button
+            onClick={() => setAboutDrawerOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white hover:scale-[1.02]"
+            title="Configurar disco"
+          >
+            <Settings className="w-4 h-4" />
+            Configurar disco
+          </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
@@ -1388,7 +1525,171 @@ function AlbumEditor({
           </div>
         </div>
       )}
-    </div>
+
+      {/* Drawer de Sobre Conexión (desliza de derecha a izquierda) */}
+      {aboutDrawerOpen && (
+          <div className="fixed inset-0 z-50 overflow-hidden">
+            <div
+              className="absolute inset-0 bg-black/65 backdrop-blur-xs transition-opacity animate-in fade-in"
+              onClick={() => setAboutDrawerOpen(false)}
+            />
+
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+              <div className="w-screen max-w-lg bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+
+                <div className="p-6 border-b border-zinc-900 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl text-zinc-400">
+                      <Settings className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-white">Configuración</h3>
+                      <p className="text-xs text-zinc-400">Ajustes del disco <span className="text-emerald-400 font-semibold">{album.title}</span></p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setAboutDrawerOpen(false)}
+                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-6 flex-1 overflow-y-auto space-y-8 custom-scrollbar">
+                  
+                  {/* Estado */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-1">Estado del Disco</h4>
+                      <p className="text-xs text-zinc-500">Los discos bloqueados no están disponibles al público.</p>
+                    </div>
+                    <div className="flex items-center justify-between bg-zinc-900/50 border border-zinc-800/50 rounded-xl p-4">
+                      <span className="text-sm font-semibold text-zinc-300">
+                        {album.disabled ? 'Bloqueado (Pronto)' : 'Público (Visible)'}
+                      </span>
+                      <button
+                        onClick={async () => {
+                          const res = await fetch("/api/management/status", {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ albumId: album.id, disabled: !album.disabled }),
+                          });
+                          if (res.ok) onSaved();
+                        }}
+                        className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer shrink-0 ${album.disabled ? 'bg-zinc-700' : 'bg-emerald-500'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${album.disabled ? 'translate-x-1' : 'translate-x-6'}`} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <hr className="border-zinc-900" />
+
+                  {/* Carátula */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-1">Carátula del Disco</h4>
+                      <p className="text-xs text-zinc-500">Sube una nueva imagen para la portada del álbum.</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {album.coverImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={album.coverImage.replace('/brand/', '/cd/')} alt="" className="w-20 h-20 rounded-lg object-cover bg-zinc-900 shadow-md" />
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg bg-zinc-900 flex items-center justify-center">
+                          <Disc3 className="w-8 h-8 text-zinc-700" />
+                        </div>
+                      )}
+                      <button
+                        onClick={() => albumCoverInputRef.current?.click()}
+                        disabled={uploadingAlbumCover}
+                        className="px-4 py-2 bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 text-zinc-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                      >
+                        {uploadingAlbumCover ? <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> : <Upload className="w-4 h-4" />}
+                        {uploadingAlbumCover ? "Subiendo..." : "Cambiar carátula"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <hr className="border-zinc-900" />
+
+                  {/* Textos de About */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-1">Textos &quot;Sobre Conexión&quot;</h4>
+                      <p className="text-xs text-zinc-500">Configura la historia y detalles del álbum.</p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">Intro del Disco</label>
+                      <textarea
+                        rows={3}
+                        value={aboutIntroInput}
+                        onChange={(e) => setAboutIntroInput(e.target.value)}
+                        placeholder="El origen de todas las heridas..."
+                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors leading-relaxed"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-zinc-400">Descripción Detallada</label>
+                      <textarea
+                        rows={6}
+                        value={aboutDetailsInput}
+                        onChange={(e) => setAboutDetailsInput(e.target.value)}
+                        placeholder="Cero representa el origen del universo de Conexión..."
+                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-emerald-500 rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors leading-relaxed"
+                      />
+                    </div>
+                  </div>
+                  
+                  <hr className="border-zinc-900" />
+                  
+                  {/* Danger Zone */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-red-500 mb-1">Zona de Peligro</h4>
+                      <p className="text-xs text-zinc-500">Esta acción no se puede deshacer.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setAboutDrawerOpen(false);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-red-950/20 border border-red-900/50 text-red-400 hover:bg-red-900/40 hover:text-white rounded-xl text-sm font-bold transition-all cursor-pointer"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar Disco
+                    </button>
+                  </div>
+                  
+                </div>
+
+                <div className="p-6 border-t border-zinc-900 bg-zinc-950 flex items-center justify-end gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setAboutDrawerOpen(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveAbout}
+                    disabled={savingAbout}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-full transition-all cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+                  >
+                    {savingAbout ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    <span>Guardar Textos</span>
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

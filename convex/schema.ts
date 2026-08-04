@@ -18,6 +18,8 @@ export default defineSchema({
     coverImage: v.optional(v.string()),
     year: v.number(),
     disabled: v.boolean(),
+    aboutIntro: v.optional(v.string()),
+    aboutDetails: v.optional(v.string()),
     // Preserva el orden de creación que en Supabase daba `created_at`.
     sortOrder: v.number(),
   }).index("by_albumId", ["albumId"]),

@@ -31,6 +31,8 @@ export interface Album {
   coverImage?: string;
   year: number;
   disabled?: boolean;
+  aboutIntro?: string;
+  aboutDetails?: string;
   tracks: Track[];
 }
 

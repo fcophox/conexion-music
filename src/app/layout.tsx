@@ -15,6 +15,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Conexión",
   description: "Escucha la discografía completa de conexión. Explora sus álbumes, letras y música alternativa en un solo lugar.",
+  icons: {
+    icon: "/favicon.png",
+    apple: "/favicon.png",
+  },
   openGraph: {
     title: "Conexión",
     description: "Escucha la discografía completa de conexión. Explora sus álbumes, letras y música alternativa en un solo lugar.",

@@ -23,6 +23,8 @@ export const getCatalog = query({
           title: a.title,
           artist: a.artist,
           description: a.description,
+          aboutIntro: a.aboutIntro,
+          aboutDetails: a.aboutDetails,
           creator: a.creator,
           tracksCount: a.tracksCount,
           durationText: a.durationText,
@@ -126,8 +128,10 @@ export const createAlbum = mutation({
   args: {
     title: v.string(),
     coverImage: v.optional(v.string()),
+    aboutIntro: v.optional(v.string()),
+    aboutDetails: v.optional(v.string()),
   },
-  handler: async (ctx, { title, coverImage }) => {
+  handler: async (ctx, { title, coverImage, aboutIntro, aboutDetails }) => {
     const allAlbums = await ctx.db.query("albums").collect();
     const sortOrder = allAlbums.length;
 
@@ -148,7 +152,9 @@ export const createAlbum = mutation({
       albumId,
       title,
       artist: "conexión",
-      description: "",
+      description: aboutDetails ?? "",
+      aboutIntro,
+      aboutDetails,
       creator: "conexión",
       tracksCount: "0 canciones",
       durationText: "0 min",
@@ -168,10 +174,14 @@ export const createAlbum = mutation({
 export const toggleAlbumStatus = mutation({
   args: { albumId: v.string(), disabled: v.boolean() },
   handler: async (ctx, { albumId, disabled }) => {
-    const album = await ctx.db
+    let album = await ctx.db
       .query("albums")
       .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
       .unique();
+    if (!album) {
+      const allAlbums = await ctx.db.query("albums").collect();
+      album = allAlbums.find((a) => a.albumId === albumId || String(a._id) === albumId) ?? null;
+    }
     if (!album) return { ok: false as const, error: "Álbum no encontrado" };
     await ctx.db.patch(album._id, { disabled });
     return { ok: true as const };
@@ -363,15 +373,19 @@ export const deleteAlbumTracks = mutation({
 export const deleteAlbum = mutation({
   args: { albumId: v.string() },
   handler: async (ctx, { albumId }) => {
-    const album = await ctx.db
+    let album = await ctx.db
       .query("albums")
       .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
       .unique();
+    if (!album) {
+      const allAlbums = await ctx.db.query("albums").collect();
+      album = allAlbums.find((a) => a.albumId === albumId || String(a._id) === albumId) ?? null;
+    }
     if (!album) return { ok: false as const, error: "Álbum no encontrado" };
 
     const tracks = await ctx.db
       .query("tracks")
-      .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+      .withIndex("by_albumId", (q) => q.eq("albumId", album.albumId))
       .collect();
 
     for (const track of tracks) {
@@ -394,15 +408,28 @@ export const updateAlbumDetails = mutation({
     title: v.optional(v.string()),
     coverStorageId: v.optional(v.id("_storage")),
     year: v.optional(v.number()),
+    aboutIntro: v.optional(v.string()),
+    aboutDetails: v.optional(v.string()),
   },
-  handler: async (ctx, { albumId, title, coverStorageId, year }) => {
-    const album = await ctx.db
+  handler: async (ctx, { albumId, title, coverStorageId, year, aboutIntro, aboutDetails }) => {
+    let album = await ctx.db
       .query("albums")
       .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
       .unique();
+    if (!album) {
+      const allAlbums = await ctx.db.query("albums").collect();
+      album = allAlbums.find((a) => a.albumId === albumId || String(a._id) === albumId) ?? null;
+    }
     if (!album) return { ok: false as const, error: "Álbum no encontrado" };
 
-    const patch: { title?: string; coverImage?: string; year?: number } = {};
+    const patch: {
+      title?: string;
+      coverImage?: string;
+      year?: number;
+      aboutIntro?: string;
+      aboutDetails?: string;
+      description?: string;
+    } = {};
 
     if (title !== undefined) {
       const clean = title.trim();
@@ -440,11 +467,27 @@ export const updateAlbumDetails = mutation({
       patch.year = year;
     }
 
+    if (aboutIntro !== undefined) {
+      patch.aboutIntro = aboutIntro;
+    }
+
+    if (aboutDetails !== undefined) {
+      patch.aboutDetails = aboutDetails;
+      patch.description = aboutDetails;
+    }
+
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(album._id, patch);
     }
 
-    return { ok: true as const, title: patch.title, coverImage: patch.coverImage, year: patch.year };
+    return {
+      ok: true as const,
+      title: patch.title,
+      coverImage: patch.coverImage,
+      year: patch.year,
+      aboutIntro: patch.aboutIntro,
+      aboutDetails: patch.aboutDetails,
+    };
   },
 });
 

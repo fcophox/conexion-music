@@ -231,9 +231,13 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
 
   if (endpoint === "create-album") {
     let title = "";
+    let aboutIntro: string | undefined;
+    let aboutDetails: string | undefined;
     try {
       const body = await request.json();
       title = typeof body?.title === "string" ? body.title.trim() : "";
+      aboutIntro = typeof body?.aboutIntro === "string" ? body.aboutIntro.trim() : undefined;
+      aboutDetails = typeof body?.aboutDetails === "string" ? body.aboutDetails.trim() : undefined;
     } catch {
       return NextResponse.json({ error: "bad request" }, { status: 400 });
     }
@@ -242,7 +246,7 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: "title is required" }, { status: 400 });
     }
 
-    const result = await createAlbum(title);
+    const result = await createAlbum(title, undefined, aboutIntro, aboutDetails);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
@@ -360,12 +364,16 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
     let title: string | undefined;
     let coverStorageId: any;
     let year: number | undefined;
+    let aboutIntro: string | undefined;
+    let aboutDetails: string | undefined;
     try {
       const body = await request.json();
       albumId = typeof body?.albumId === "string" ? body.albumId : "";
       title = typeof body?.title === "string" ? body.title : undefined;
       coverStorageId = typeof body?.coverStorageId === "string" && body.coverStorageId ? body.coverStorageId : undefined;
       year = typeof body?.year === "number" ? body.year : undefined;
+      aboutIntro = typeof body?.aboutIntro === "string" ? body.aboutIntro : undefined;
+      aboutDetails = typeof body?.aboutDetails === "string" ? body.aboutDetails : undefined;
     } catch {
       return NextResponse.json({ error: "bad request" }, { status: 400 });
     }
@@ -374,11 +382,22 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: "albumId es requerido" }, { status: 400 });
     }
 
-    const result = await updateAlbumDetails({ albumId, title, coverStorageId, year });
+    console.log("[album-details] Request:", { albumId, title, coverStorageId, year, aboutIntro, aboutDetails });
+
+    const result = await updateAlbumDetails({ albumId, title, coverStorageId, year, aboutIntro, aboutDetails });
+    console.log("[album-details] Result:", JSON.stringify(result));
     if (!result.ok) {
+      console.error("[album-details route error]", result.error);
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
-    return NextResponse.json({ ok: true, title: result.title, coverImage: result.coverImage, year: result.year });
+    return NextResponse.json({
+      ok: true,
+      title: result.title,
+      coverImage: result.coverImage,
+      year: result.year,
+      aboutIntro: result.aboutIntro,
+      aboutDetails: result.aboutDetails,
+    });
   }
 
   if (endpoint === "rename") {

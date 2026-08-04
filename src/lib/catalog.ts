@@ -103,10 +103,12 @@ export async function reorderAlbums(
 
 export async function createAlbum(
   title: string,
-  coverImage?: string
+  coverImage?: string,
+  aboutIntro?: string,
+  aboutDetails?: string
 ): Promise<{ ok: boolean; albumId?: string; error?: string }> {
   try {
-    return await convex.mutation(api.catalog.createAlbum, { title, coverImage });
+    return await convex.mutation(api.catalog.createAlbum, { title, coverImage, aboutIntro, aboutDetails });
   } catch (error) {
     console.error("Convex createAlbum mutation error:", error);
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
@@ -141,10 +143,20 @@ export async function updateAlbumDetails(args: {
   title?: string;
   coverStorageId?: Id<"_storage">;
   year?: number;
-}): Promise<{ ok: boolean; title?: string; coverImage?: string; year?: number; error?: string }> {
+  aboutIntro?: string;
+  aboutDetails?: string;
+}): Promise<{ ok: boolean; title?: string; coverImage?: string; year?: number; aboutIntro?: string; aboutDetails?: string; error?: string }> {
   try {
-    return await convex.mutation(api.catalog.updateAlbumDetails, args);
+    const mutationArgs: any = { albumId: args.albumId };
+    if (args.title !== undefined) mutationArgs.title = args.title;
+    if (args.coverStorageId !== undefined) mutationArgs.coverStorageId = args.coverStorageId;
+    if (args.year !== undefined) mutationArgs.year = args.year;
+    if (args.aboutIntro !== undefined) mutationArgs.aboutIntro = args.aboutIntro;
+    if (args.aboutDetails !== undefined) mutationArgs.aboutDetails = args.aboutDetails;
+
+    return await convex.mutation(api.catalog.updateAlbumDetails, mutationArgs);
   } catch (error) {
+    console.error("updateAlbumDetails error:", error);
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
