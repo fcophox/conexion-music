@@ -234,6 +234,13 @@ function Dashboard({
     }
   };
 
+  const handleAlbumDeleted = async (albumId: string) => {
+    const remaining = albums.filter((a) => a.id !== albumId);
+    setSelectedId(remaining[0]?.id ?? "");
+    await onReload();
+    showToast("Disco eliminado correctamente");
+  };
+
   const moveAlbum = async (index: number, direction: "up" | "down") => {
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= localAlbums.length) return;
@@ -543,6 +550,7 @@ function Dashboard({
               album={selected}
               allAlbums={albums}
               onSaved={onReload}
+              onDeleted={handleAlbumDeleted}
             />
           )}
         </div>
@@ -572,10 +580,12 @@ function AlbumEditor({
   album,
   allAlbums,
   onSaved,
+  onDeleted,
 }: {
   album: AlbumWithStats;
   allAlbums: AlbumWithStats[];
   onSaved: () => void;
+  onDeleted?: (albumId: string) => void;
 }) {
   const [tracks, setTracks] = useState<TrackWithStats[]>(album.tracks);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -595,6 +605,32 @@ function AlbumEditor({
 
   // Drawer de detalles (imagen de fondo + letra)
   const [detailsTrack, setDetailsTrack] = useState<TrackWithStats | null>(null);
+
+  // Deletion state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletingAlbum, setDeletingAlbum] = useState(false);
+
+  const handleDeleteAlbum = async () => {
+    if (deletingAlbum) return;
+    setDeletingAlbum(true);
+    try {
+      const res = await fetch("/api/management/delete-album", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: album.id }),
+      });
+      if (res.ok) {
+        setShowDeleteConfirm(false);
+        if (onDeleted) onDeleted(album.id);
+      } else {
+        console.error("Error al eliminar disco");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDeletingAlbum(false);
+    }
+  };
 
   // Habilitar/deshabilitar canción (switch por fila)
   const [togglingId, setTogglingId] = useState<number | null>(null);
@@ -731,6 +767,9 @@ function AlbumEditor({
   const [editingAlbumTitle, setEditingAlbumTitle] = useState(false);
   const [albumTitleInput, setAlbumTitleInput] = useState(album.title);
   const [savingAlbumTitle, setSavingAlbumTitle] = useState(false);
+  const [editingAlbumYear, setEditingAlbumYear] = useState(false);
+  const [albumYearInput, setAlbumYearInput] = useState(album.year);
+  const [savingAlbumYear, setSavingAlbumYear] = useState(false);
 
   const handleSaveAlbumTitle = async () => {
     const cleanTitle = albumTitleInput.trim();
@@ -754,6 +793,31 @@ function AlbumEditor({
       console.error("Error updating album title:", err);
     } finally {
       setSavingAlbumTitle(false);
+    }
+  };
+
+  const handleSaveAlbumYear = async () => {
+    const cleanYear = Number(albumYearInput);
+    if (isNaN(cleanYear) || cleanYear < 1900 || cleanYear > 2100 || savingAlbumYear) return;
+    if (cleanYear === album.year) {
+      setEditingAlbumYear(false);
+      return;
+    }
+    setSavingAlbumYear(true);
+    try {
+      const res = await fetch("/api/management/album-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: album.id, year: cleanYear }),
+      });
+      if (res.ok) {
+        setEditingAlbumYear(false);
+        onSaved();
+      }
+    } catch (err) {
+      console.error("Error updating album year:", err);
+    } finally {
+      setSavingAlbumYear(false);
     }
   };
 
@@ -888,29 +952,92 @@ function AlbumEditor({
                 </button>
               </div>
             )}
-            <p className="text-zinc-400 text-sm mt-1">
-              {album.artist} • {album.year} • {tracks.length} canciones
+            <p className="text-zinc-400 text-sm mt-1 flex items-center gap-1.5 flex-wrap">
+              <span>{album.artist}</span>
+              <span>•</span>
+              {editingAlbumYear ? (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSaveAlbumYear();
+                  }}
+                  className="inline-flex items-center gap-1.5"
+                >
+                  <input
+                    type="number"
+                    min="1900"
+                    max="2100"
+                    value={albumYearInput}
+                    onChange={(e) => setAlbumYearInput(Number(e.target.value))}
+                    autoFocus
+                    className="bg-zinc-900 border border-emerald-500 text-white text-xs font-semibold rounded px-1.5 py-0.5 focus:outline-none w-16"
+                  />
+                  <button
+                    type="submit"
+                    disabled={savingAlbumYear || isNaN(Number(albumYearInput))}
+                    className="p-1 bg-emerald-500 hover:bg-emerald-400 text-black rounded transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {savingAlbumYear ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingAlbumYear(false);
+                      setAlbumYearInput(album.year);
+                    }}
+                    className="p-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded transition-colors cursor-pointer"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+              ) : (
+                <span className="inline-flex items-center gap-1 group/year">
+                  <span>{album.year}</span>
+                  <button
+                    onClick={() => {
+                      setAlbumYearInput(album.year);
+                      setEditingAlbumYear(true);
+                    }}
+                    className="p-1 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded transition-colors cursor-pointer"
+                    title="Editar año"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <span>•</span>
+              <span>{tracks.length} canciones</span>
             </p>
           </div>
         </div>
 
-        {/* Status Toggle */}
-        <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
-          <span className="text-sm font-semibold text-zinc-300">Estado: {album.disabled ? 'Bloqueado (Pronto)' : 'Público'}</span>
+        {/* Status Toggle & Delete */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+            <span className="text-sm font-semibold text-zinc-300">Estado: {album.disabled ? 'Bloqueado (Pronto)' : 'Público'}</span>
+            <button
+              onClick={async () => {
+                const res = await fetch("/api/management/status", {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ albumId: album.id, disabled: !album.disabled }),
+                });
+                if (res.ok) {
+                  onSaved();
+                }
+              }}
+              className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${album.disabled ? 'bg-zinc-700' : 'bg-emerald-500'}`}
+            >
+              <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${album.disabled ? 'translate-x-1' : 'translate-x-6'}`} />
+            </button>
+          </div>
+
           <button
-            onClick={async () => {
-              const res = await fetch("/api/management/status", {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ albumId: album.id, disabled: !album.disabled }),
-              });
-              if (res.ok) {
-                onSaved();
-              }
-            }}
-            className={`w-11 h-6 rounded-full transition-colors relative cursor-pointer flex-shrink-0 ${album.disabled ? 'bg-zinc-700' : 'bg-emerald-500'}`}
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center justify-center p-2.5 bg-red-950/40 border border-red-800/40 text-red-400 hover:bg-red-900/50 hover:text-white rounded-xl transition-all cursor-pointer"
+            title="Eliminar disco"
           >
-            <div className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${album.disabled ? 'translate-x-1' : 'translate-x-6'}`} />
+            <Trash2 className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -1213,6 +1340,53 @@ function AlbumEditor({
             onSaved();
           }}
         />
+      )}
+
+      {/* Modal de confirmación para eliminar disco */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div
+            onClick={() => !deletingAlbum && setShowDeleteConfirm(false)}
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity duration-300 animate-in fade-in"
+          />
+          <div className="relative w-full max-w-md bg-zinc-900/90 border border-red-500/30 rounded-2xl p-6 shadow-2xl space-y-6 backdrop-blur-md transition-all animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3 text-red-500">
+              <AlertCircle className="w-8 h-8 shrink-0" />
+              <h3 className="text-xl font-black text-white">¿Eliminar este disco?</h3>
+            </div>
+            <p className="text-zinc-400 text-sm leading-relaxed">
+              Esta acción es irreversible. Se eliminará el disco <strong className="text-white">"{album.title}"</strong> junto con todas sus <strong className="text-white">{tracks.length} canciones</strong> y sus respectivas reproducciones e interacciones.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                disabled={deletingAlbum}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-5 py-2.5 rounded-full font-bold text-sm bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={deletingAlbum}
+                onClick={handleDeleteAlbum}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm bg-red-600 hover:bg-red-500 text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-600/20"
+              >
+                {deletingAlbum ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Eliminando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Eliminar disco</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -360,20 +360,49 @@ export const deleteAlbumTracks = mutation({
   },
 });
 
-export const updateAlbumDetails = mutation({
-  args: {
-    albumId: v.string(),
-    title: v.optional(v.string()),
-    coverStorageId: v.optional(v.id("_storage")),
-  },
-  handler: async (ctx, { albumId, title, coverStorageId }) => {
+export const deleteAlbum = mutation({
+  args: { albumId: v.string() },
+  handler: async (ctx, { albumId }) => {
     const album = await ctx.db
       .query("albums")
       .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
       .unique();
     if (!album) return { ok: false as const, error: "Álbum no encontrado" };
 
-    const patch: { title?: string; coverImage?: string } = {};
+    const tracks = await ctx.db
+      .query("tracks")
+      .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+      .collect();
+
+    for (const track of tracks) {
+      const stat = await ctx.db
+        .query("trackStats")
+        .withIndex("by_trackId", (q) => q.eq("trackId", track.trackId))
+        .unique();
+      if (stat) await ctx.db.delete(stat._id);
+      await ctx.db.delete(track._id);
+    }
+
+    await ctx.db.delete(album._id);
+    return { ok: true as const };
+  },
+});
+
+export const updateAlbumDetails = mutation({
+  args: {
+    albumId: v.string(),
+    title: v.optional(v.string()),
+    coverStorageId: v.optional(v.id("_storage")),
+    year: v.optional(v.number()),
+  },
+  handler: async (ctx, { albumId, title, coverStorageId, year }) => {
+    const album = await ctx.db
+      .query("albums")
+      .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
+      .unique();
+    if (!album) return { ok: false as const, error: "Álbum no encontrado" };
+
+    const patch: { title?: string; coverImage?: string; year?: number } = {};
 
     if (title !== undefined) {
       const clean = title.trim();
@@ -407,11 +436,15 @@ export const updateAlbumDetails = mutation({
       }
     }
 
+    if (year !== undefined) {
+      patch.year = year;
+    }
+
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(album._id, patch);
     }
 
-    return { ok: true as const, title: patch.title, coverImage: patch.coverImage };
+    return { ok: true as const, title: patch.title, coverImage: patch.coverImage, year: patch.year };
   },
 });
 

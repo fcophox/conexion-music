@@ -20,7 +20,10 @@ import {
   Music,
   Disc3,
   Info,
-  Clock
+  Clock,
+  Calendar,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 function slugify(text: string) {
@@ -48,7 +51,33 @@ const BACKGROUNDS = [
   '/cd/bg-conexion-doblecero.png',
   '/cd/bg-conexion-geminis.png',
   '/cd/bg-conexion-vertical.png'
-];
+]; const ALBUM_ABOUT_TEXTS: Record<string, { title: string; intro: string; details: string }> = {
+  "cero": {
+    title: "Cero — conexión",
+    intro: "El origen de todas las heridas. Un viaje hacia la infancia, la frustración y los recuerdos que marcaron el comienzo de una historia imposible de olvidar.",
+    details: "Cero representa el origen del universo de Conexión. Es el álbum donde nacen las fracturas emocionales que acompañarán al personaje durante toda la discografía. Sus canciones exploran la infancia, la frustración, la pérdida de la inocencia, la rabia contenida y la memoria emocional como elementos que moldean la identidad. Musicalmente se mueve entre guitarras densas, voces desgastadas y una estética grunge cruda, donde la imperfección es parte del mensaje. No busca ofrecer respuestas ni sanar el pasado; busca mirarlo de frente, comprender que existió y aceptar que algunas heridas nunca desaparecen, solo aprenden a convivir con nosotros."
+  },
+  "doble-cero": {
+    title: "Doble Cero — conexión",
+    intro: "Las heridas crecieron con el tiempo. El peso de la adultez transforma el dolor en una presencia permanente.",
+    details: "Doble Cero continúa la historia iniciada en Cero, trasladando el conflicto hacia una etapa más adulta y consciente. El dolor deja de ser un descubrimiento para convertirse en compañía permanente. Las canciones hablan del desgaste emocional, de la repetición de los mismos ciclos, de las responsabilidades, del cansancio psicológico y de la sensación de cargar con un pasado que nunca terminó de irse. Musicalmente el álbum mantiene la esencia grunge de la banda, pero incorpora composiciones más complejas, letras más introspectivas y una producción que refleja una oscuridad más profunda y madura. Es la misma caída, observada desde una perspectiva completamente distinta."
+  },
+  "geminis": {
+    title: "Géminis — conexión",
+    intro: "El despertar de la conciencia y del músico. Un universo donde la dualidad, los sueños y la rebeldía revelan una nueva identidad.",
+    details: "Géminis representa el despertar creativo y espiritual de Conexión. Es un disco donde la realidad y lo intangible conviven permanentemente, explorando conceptos como la dualidad, los sueños, la conciencia, los símbolos y las revelaciones personales. Sin embargo, detrás de su atmósfera onírica también existe un acto de rebeldía: es el momento en que el protagonista decide dejar de esconder su dolor para transformarlo en expresión artística. Las composiciones adquieren una dimensión más experimental y atmosférica, reflejando el conflicto entre dos versiones de una misma persona que luchan por definir quién tomará el control."
+  },
+  "vertical": {
+    title: "Vertical — conexión",
+    intro: "Mantenerse de pie también es una batalla. Un disco donde la ansiedad, el cuerpo y la mente luchan por encontrar equilibrio.",
+    details: "Vertical representa el renacimiento más humano dentro del universo de Conexión. Después de los recuerdos, la dualidad y el desgaste emocional, el conflicto se traslada al presente, donde la ansiedad, la salud mental y la lucha contra uno mismo ocupan el centro del relato. El disco explora la vulnerabilidad desde una perspectiva física y psicológica, mostrando cómo la mente transforma la realidad cotidiana en un espacio de incertidumbre permanente. Conceptualmente simboliza la convivencia entre la altura y el abismo, entre la caída y la posibilidad de volver a levantarse. Es un álbum sobre resistencia, aceptación y la difícil tarea de reconstruirse sin dejar de reconocer las propias cicatrices."
+  },
+  "blackout": {
+    title: "Blackout — conexión",
+    intro: "Cuando el ruido desaparece, solo queda la verdad. Un viaje acústico hacia la introspección, la nostalgia y el silencio.",
+    details: "Blackout es el álbum acústico y más íntimo de Conexión. Reinterpreta la esencia grunge desde el silencio, reduciendo cada composición a sus elementos más puros: voz, instrumentos de madera y percusiones tradicionales que aportan una textura orgánica y atemporal. Es un disco construido sobre la introspección, la soledad, la incertidumbre y la contemplación. Aquí no existen artificios ni grandes producciones; cada interpretación busca transmitir cercanía, vulnerabilidad y honestidad absoluta. Blackout representa una desconexión del ruido exterior para volver a escuchar aquello que siempre estuvo dentro: los recuerdos, las dudas y la necesidad de seguir creando incluso cuando todo alrededor parece haberse apagado."
+  }
+};
 
 function HandIcon({ className }: { className?: string }) {
   return (
@@ -108,6 +137,8 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithStats | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
+  const toggleDetails = (id: string) => setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   const mainRef = useRef<HTMLDivElement>(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<TrackWithStats | null>(null);
@@ -587,7 +618,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
               </div>
 
               {/* Main Content Layout */}
-              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 py-4 md:py-6 lg:py-[clamp(1rem,3vh,2rem)] relative z-20 flex flex-col lg:flex-row gap-6 lg:gap-12 pb-28 md:pb-32">
+              <div className="flex-1 max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 py-4 md:py-6 lg:py-[clamp(1rem,3vh,2rem)] relative z-20 flex flex-col lg:flex-row gap-6 lg:gap-12 pb-44 md:pb-52">
 
                 {/* Left Column: Cover and Info */}
                 <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 md:space-y-5">
@@ -765,7 +796,7 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block">
+              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
                 <BackgroundCrossfade currentBg={currentBg} />
                 {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
                 <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
@@ -785,88 +816,76 @@ Que viaja directo a tu dirección.`;
                 </div>
               </div>
 
-              {/* Header section with logo */}
-              <div className="relative max-w-[1400px] w-full mx-auto px-4 md:px-12 lg:px-16 xl:px-20 pt-6 md:pt-8 pb-8 space-y-6 md:space-y-8 z-10">
-                <div className="flex flex-col items-center text-center space-y-4 md:space-y-6">
-                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-10 md:h-12 lg:h-14 w-auto drop-shadow-lg" />
+              {/* HERO SECTION (Half Screen Height) */}
+              <div className="relative w-full min-h-[50vh] flex flex-col justify-center items-center text-center px-4 md:px-12 lg:px-16 xl:px-20 py-8 z-10">
+                <div className="max-w-3xl flex flex-col items-center space-y-4 md:space-y-6 animate-fade-in">
+                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-16 lg:h-20 w-auto drop-shadow-2xl" />
                   <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sobre conexión</span>
                   <p className="text-zinc-300 text-sm md:text-base lg:text-lg leading-relaxed max-w-3xl mx-auto">
-                    Conexión es un proyecto grunge/post-grunge nacido desde el caos mental, la ansiedad y la necesidad de convertir heridas en canciones. Durante la pandemia en Chile, el músico volvió a componer y se reencontró con letras antiguas escritas cuando era un niño confundido, perturbado y sin entender lo que le pasaba. Desde entonces, ha ido depurando canciones nuevas y viejas, conectando historias, símbolos y mensajes ocultos entre discos conceptuales que, pieza por pieza, construyen una gran narrativa de dolor, desgaste, despertar y renacimiento.
+                    Conexión es un proyecto grunge/post-grunge nacido desde el caos mental, la ansiedad y la necesidad de convertir heridas en sonido.
                   </p>
                 </div>
-
-
               </div>
 
               {/* Albums blocks */}
-              <div className="w-full flex flex-col gap-12 md:gap-16 lg:gap-20 pb-28 md:pb-32 z-10">
+              <div className="w-full flex flex-col gap-12 md:gap-16 lg:gap-20 pb-44 md:pb-52 z-10 max-w-4xl">
                 {albums.map((album, index) => (
                   <div key={album.id} className="w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative flex flex-col lg:flex-row gap-6 lg:gap-12">
-                    {/* Left Column: Cover and Info */}
-                    <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4">
-                      <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,26vh,300px)] lg:h-[clamp(220px,26vh,300px)] xl:w-[clamp(260px,32vh,360px)] xl:h-[clamp(260px,32vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
+                    {/* Left Column: Cover */}
+                    <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3">
+                      <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,26vh,300px)] lg:h-[clamp(220px,26vh,300px)] xl:w-[clamp(260px,32vh,360px)] xl:h-[clamp(260px,32vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
                         {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
-                      </div>
-
-                      <div className="space-y-1.5 w-full">
-                        <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">{album.year}</span>
-                        <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">{album.disabled ? `Disco ${index + 1}` : album.title}</h2>
-                        {album.disabled && (
-                          <span className="inline-block mt-1.5 bg-[#FFC107]/90 text-black text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded shrink-0">Pronto</span>
-                        )}
                       </div>
                     </div>
 
-                    {/* Right Column: Full Description */}
-                    <div className="flex-1 w-full space-y-4">
-                      <div className="border-b border-zinc-800 pb-3">
-                        <h3 className="text-xl md:text-2xl font-bold text-white">Historia del Álbum</h3>
-                      </div>
+                    {/* Right Column: Title, Intro & Description */}
+                    <div className="flex-1 w-full space-y-3">
+                      {(() => {
+                        const content = ALBUM_ABOUT_TEXTS[album.id] || ALBUM_ABOUT_TEXTS[slugify(album.title)] || (index === 4 ? ALBUM_ABOUT_TEXTS["blackout"] : undefined);
+                        const isExpanded = !!expandedDetails[album.id];
 
-                      <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed tracking-wide font-sans select-text max-w-2xl py-1 space-y-3">
-                        {(() => {
-                          if (album.id === "cero") {
-                            return (
-                              <>
-                                <p><strong>Cero</strong> es el punto de partida. El disco donde todo comienza desde la herida, desde la frustración acumulada y desde una infancia marcada por sensaciones que todavía pesan.</p>
-                                <p>Es un álbum de dolor, desgaste y memoria emocional. Suena como volver a mirar hacia atrás y encontrar habitaciones cerradas, voces antiguas, rabia guardada y una tristeza que nunca terminó de irse. Aquí el grunge aparece más crudo, más directo, más roto.</p>
-                                <p>Conceptualmente, <strong>Cero</strong> representa el origen: ese lugar donde nacen las grietas, donde la inocencia se mezcla con la frustración y donde el personaje todavía no entiende del todo qué le pasó, pero ya siente que algo dentro de él quedó dañado.</p>
-                                <p>No es un disco sobre sanar. Es un disco sobre reconocer la herida.</p>
-                              </>
-                            );
-                          }
-                          if (album.id === "doble-cero") {
-                            return (
-                              <>
-                                <p><strong>Doble Cero</strong> continúa el desgaste, pero desde una versión más adulta, más consciente y más pesada. Si <strong>Cero</strong> mira hacia la niñez y el origen del dolor, <strong>Doble Cero</strong> observa lo que queda después: una persona más grande, más cansada, más golpeada por la vida, pero todavía de pie.</p>
-                                <p>El disco mantiene la frustración, el dolor y la suciedad emocional del grunge, pero con una mirada más madura. Ya no se trata solo de no entender lo que duele, sino de convivir con eso. De cargarlo. De repetir ciclos. De sentir que ciertas heridas crecieron junto con el cuerpo.</p>
-                                <p><strong>Doble Cero</strong> habla de la acumulación: más años, más peso, más ruido mental, más preguntas sin respuesta. Es el reflejo de alguien que ya no es un niño, pero que todavía arrastra las ruinas de lo que fue.</p>
-                                <p>Conceptualmente, es una segunda caída. O quizá la misma caída, pero vista desde otro ángulo.</p>
-                              </>
-                            );
-                          }
-                          if (album.id === "geminis" || album.title.toLowerCase() === "géminis") {
-                            return (
-                              <>
-                                <p><strong>Géminis</strong> es el despertar. Un disco más onírico, astral y abstracto, donde la mente comienza a partirse en símbolos, visiones y revelaciones internas.</p>
-                                <p>Aquí Conexión se mueve entre lo real y lo invisible. Las canciones parecen venir de sueños raros, lecturas astrales, dobles internos y mensajes que aparecen cuando la conciencia empieza a abrirse. Es un disco de darse cuenta, de mirar alrededor y entender que algo no encaja.</p>
-                                <p>Pero <strong>Géminis</strong> no es solo contemplación: también es un golpe en la mesa. Es el grito de rebeldía después de años de silencio. Es el momento en que el personaje deja de observar su propio caos y decide ejecutarlo, enfrentarlo, usarlo como energía.</p>
-                                <p>Conceptualmente, <strong>Géminis</strong> representa la división y la revelación: dos caras, dos voces, dos versiones de una misma persona luchando por despertar. Es un disco de señales ocultas, rabia iluminada y ruptura interna.</p>
-                              </>
-                            );
-                          }
-                          if (album.id === "vertical" || album.title.toLowerCase() === "vertical") {
-                            return (
-                              <>
-                                <p><strong>Vertical</strong> es un renacer más psicológico, más terrenal y más físico. Después del dolor, del desgaste y del despertar, llega la ansiedad como una fuerza concreta: el cuerpo habla, la mente se acelera y la realidad se vuelve demasiado estrecha.</p>
-                                <p>Este disco baja el viaje astral de <strong>Géminis</strong> hacia una dimensión más humana. Aquí aparecen los síntomas, el vértigo, la presión en el pecho, la sensación de caída, el miedo a perder el control y esa lucha silenciosa contra uno mismo.</p>
-                                <p><strong>Vertical</strong> habla de estar de pie cuando todo por dentro quiere derrumbarse. Es un álbum sobre ansiedad, renacimiento y supervivencia mental. No desde una mirada heroica, sino desde una más real: la de alguien que intenta recomponerse mientras todavía tiembla.</p>
-                                <p>Conceptualmente, <strong>Vertical</strong> es la altura y el abismo al mismo tiempo. Es crecer, caer, respirar, volver a levantarse y aceptar que renacer también puede doler.</p>
-                              </>
-                            );
-                          }
-                          return <p>{album.description}</p>;
-                        })()}
+                        return (
+                          <>
+                            <div className="space-y-1">
+                              <span className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{album.year}</span>
+                              <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
+                                {content ? content.title : (album.disabled ? `Disco ${index + 1}` : `${album.title} — conexión`)}
+                              </h2>
+                            </div>
+
+                            <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed tracking-wide font-sans select-text max-w-2xl py-1 space-y-3">
+                              {content ? (
+                                <>
+                                  <p className="text-zinc-200 font-medium leading-relaxed">
+                                    {content.intro}
+                                  </p>
+                                  <button
+                                    onClick={() => toggleDetails(album.id)}
+                                    className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-400 transition-colors cursor-pointer py-1"
+                                  >
+                                    <span>{isExpanded ? "Ocultar descripción" : "Ver descripción"}</span>
+                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                  </button>
+                                  {isExpanded && (
+                                    <div className="pt-2 text-zinc-400 text-sm leading-relaxed space-y-3 border-t border-zinc-900/80 animate-fade-in">
+                                      <p>{content.details}</p>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p>{album.description}</p>
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+
+                      {/* Album details: tracks count */}
+                      <div className="flex items-center gap-3 text-xs md:text-sm text-zinc-400 font-medium pt-2">
+                        <span className="flex items-center gap-1.5">
+                          <Music className="w-4 h-4 text-emerald-400" />
+                          <span className="text-zinc-200 font-bold">{album.tracks.length}</span> canciones
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -877,7 +896,7 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             /* HOME PAGE VIEW (Netflix-style hero + Discos row)                          */
             /* ========================================================================= */
-            <div className="relative z-10 w-full pb-28 md:pb-32">
+            <div className="relative z-10 w-full pb-44 md:pb-52">
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10">
@@ -1040,7 +1059,7 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-28 md:pb-32">
+              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-44 md:pb-52">
 
                 {/* Album Hero Info */}
                 <div className="relative pt-0 lg:pt-2 pb-4 md:pb-6 flex flex-col lg:flex-row items-center lg:items-end gap-5 md:gap-6 z-10">

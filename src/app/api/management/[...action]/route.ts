@@ -11,6 +11,7 @@ import {
   reorderAlbumTracks,
   reorderAlbums,
   createAlbum,
+  deleteAlbum,
   renameTrack,
   toggleAlbumStatus,
   toggleTrackStatus,
@@ -18,6 +19,7 @@ import {
   updateAlbumDetails,
   generateImageUploadUrl,
 } from "@/lib/catalog";
+
 import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
 import path from "node:path";
@@ -247,6 +249,26 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ ok: true, albumId: result.albumId });
   }
 
+  if (endpoint === "delete-album") {
+    let albumId = "";
+    try {
+      const body = await request.json();
+      albumId = typeof body?.albumId === "string" ? body.albumId.trim() : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!albumId) {
+      return NextResponse.json({ error: "albumId is required" }, { status: 400 });
+    }
+
+    const result = await deleteAlbum(albumId);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "not found" }, { status: 404 });
 }
 
@@ -337,11 +359,13 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
     let albumId = "";
     let title: string | undefined;
     let coverStorageId: any;
+    let year: number | undefined;
     try {
       const body = await request.json();
       albumId = typeof body?.albumId === "string" ? body.albumId : "";
       title = typeof body?.title === "string" ? body.title : undefined;
       coverStorageId = typeof body?.coverStorageId === "string" && body.coverStorageId ? body.coverStorageId : undefined;
+      year = typeof body?.year === "number" ? body.year : undefined;
     } catch {
       return NextResponse.json({ error: "bad request" }, { status: 400 });
     }
@@ -350,11 +374,11 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: "albumId es requerido" }, { status: 400 });
     }
 
-    const result = await updateAlbumDetails({ albumId, title, coverStorageId });
+    const result = await updateAlbumDetails({ albumId, title, coverStorageId, year });
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
-    return NextResponse.json({ ok: true, title: result.title, coverImage: result.coverImage });
+    return NextResponse.json({ ok: true, title: result.title, coverImage: result.coverImage, year: result.year });
   }
 
   if (endpoint === "rename") {

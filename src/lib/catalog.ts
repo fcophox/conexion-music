@@ -113,6 +113,18 @@ export async function createAlbum(
   }
 }
 
+export async function deleteAlbum(
+  albumId: string
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.deleteAlbum, { albumId });
+  } catch (error) {
+    console.error("Convex deleteAlbum mutation error:", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+
 export async function toggleAlbumStatus(
   albumId: string,
   disabled: boolean
@@ -128,7 +140,8 @@ export async function updateAlbumDetails(args: {
   albumId: string;
   title?: string;
   coverStorageId?: Id<"_storage">;
-}): Promise<{ ok: boolean; title?: string; coverImage?: string; error?: string }> {
+  year?: number;
+}): Promise<{ ok: boolean; title?: string; coverImage?: string; year?: number; error?: string }> {
   try {
     return await convex.mutation(api.catalog.updateAlbumDetails, args);
   } catch (error) {
