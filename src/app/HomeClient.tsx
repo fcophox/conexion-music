@@ -228,6 +228,15 @@ export default function HomeClient({
   const [selectedCategory, setSelectedCategory] = useState("Todos");
   const [marketplaceProducts, setMarketplaceProducts] = useState<any[]>(initialProducts && initialProducts.length > 0 ? initialProducts : MARKETPLACE_PRODUCTS);
   const [hoveredProximamente, setHoveredProximamente] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toastMessage) return;
+    const timer = setTimeout(() => {
+      setToastMessage(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [toastMessage]);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const toggleDetails = (id: string) => setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   const mainRef = useRef<HTMLDivElement>(null);
@@ -1039,10 +1048,11 @@ Que viaja directo a tu dirección.`;
                     return (
                       <div
                         key={product.id}
-                        className="bg-zinc-900/35 backdrop-blur-sm border border-zinc-800/60 rounded-2xl overflow-hidden flex flex-col hover:border-zinc-700/60 transition-all group hover:-translate-y-0.5 shadow-lg shadow-black/20"
+                        onClick={() => setToastMessage("El marketplace aún no está disponible...")}
+                        className="bg-zinc-900/35 backdrop-blur-sm border border-zinc-800/60 rounded-2xl overflow-hidden flex flex-col hover:border-zinc-700/60 transition-all group hover:-translate-y-0.5 active:scale-[0.98] shadow-lg shadow-black/20 cursor-pointer"
                       >
                         {/* Image Container (Ratio square) */}
-                        <div className="w-full aspect-square bg-zinc-950 overflow-hidden relative border-b border-zinc-900 flex items-center justify-center">
+                        <div className="w-full aspect-1 bg-zinc-950 overflow-hidden relative border-b border-zinc-900 flex items-center justify-center">
                           <div className="w-full h-full transform group-hover:scale-105 transition-transform duration-500 ease-out">
                             {album ? (
                               renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full object-cover", album.coverImage)
@@ -1062,24 +1072,18 @@ Que viaja directo a tu dirección.`;
                         </div>
 
                         {/* Text & Price Details */}
-                        <div className="p-3 md:p-4 flex-1 flex flex-col justify-between gap-3">
+                        <div className="p-2 md:p-4 flex-1 flex flex-col justify-between gap-3">
                           <div className="space-y-1">
                             <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{product.category}</span>
-                            <h4 className="font-bold text-xs md:text-sm text-white group-hover:text-[#FFC400] transition-colors leading-snug line-clamp-1">
+                            <h4 className="font-semibold text-xs md:text-sm text-white group-hover:text-[#FFC400] transition-colors leading-snug line-clamp-1">
                               {product.name}
                             </h4>
                           </div>
 
                           <div className="flex flex-col gap-2 pt-1 mt-auto">
-                            <span className="text-sm md:text-base font-black text-white font-mono">
+                            <span className="text-sm md:text-base font-semibold text-white/50">
                               ${product.price.toFixed(2)} USD
                             </span>
-                            <button
-                              onClick={() => alert(`Añadido al carrito: ${product.name}`)}
-                              className="w-full py-1.5 md:py-2 text-[10px] md:text-xs font-black uppercase tracking-wider bg-[#FFC400] hover:bg-[#FFD54F] text-black rounded-lg transition-all active:scale-[0.98] shadow-md shadow-[#FFC400]/5 cursor-pointer text-center"
-                            >
-                              Comprar
-                            </button>
                           </div>
                         </div>
                       </div>
@@ -1698,6 +1702,18 @@ Que viaja directo a tu dirección.`;
                   </>
                 )}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Toast Notification */}
+        {toastMessage && (
+          <div className="fixed bottom-6 left-1/2 z-[100] animate-fade-in-up">
+            <div className="flex items-center gap-3 bg-zinc-950/95 border border-[#FFC400]/30 px-5 py-3 rounded-xl shadow-2xl shadow-black/85 backdrop-blur-md">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FFC400] animate-pulse shrink-0" />
+              <p className="text-zinc-200 text-xs md:text-sm font-semibold tracking-wide">
+                {toastMessage}
+              </p>
             </div>
           </div>
         )}
