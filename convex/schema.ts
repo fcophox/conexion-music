@@ -57,4 +57,14 @@ export default defineSchema({
     key: v.string(),
     value: v.string(),
   }).index("by_key", ["key"]),
+
+  marketplace: defineTable({
+    name: v.string(),
+    category: v.string(),
+    price: v.number(),
+    description: v.optional(v.string()),
+    image: v.optional(v.string()),
+    imageStorageId: v.optional(v.id("_storage")),
+    sortOrder: v.number(),
+  }),
 });

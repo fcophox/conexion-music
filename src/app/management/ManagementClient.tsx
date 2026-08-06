@@ -27,6 +27,7 @@ import {
   ArrowRight,
   Plus,
   Settings,
+  Store,
 } from "lucide-react";
 import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
 
@@ -187,6 +188,32 @@ function Dashboard({
 
   const dragItemIndex = useRef<number | null>(null);
   const [creatingAlbum, setCreatingAlbum] = useState(false);
+
+  // Pestañas (Catálogo vs Marketplace)
+  const [activeTab, setActiveTab] = useState<"catalog" | "marketplace">("catalog");
+  const [marketplaceProducts, setMarketplaceProducts] = useState<any[]>([]);
+  const [loadingMarketplace, setLoadingMarketplace] = useState(false);
+
+  const loadMarketplace = useCallback(async () => {
+    setLoadingMarketplace(true);
+    try {
+      const res = await fetch("/api/management/marketplace", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setMarketplaceProducts(data.products || []);
+      }
+    } catch (err) {
+      console.error("Error al cargar productos de la tienda:", err);
+    } finally {
+      setLoadingMarketplace(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "marketplace") {
+      loadMarketplace();
+    }
+  }, [activeTab, loadMarketplace]);
 
   useEffect(() => {
     setLocalAlbums(albums);
@@ -391,135 +418,172 @@ function Dashboard({
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1 custom-scrollbar">
-          <div className="flex items-center justify-between px-3 py-2">
-            <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">
-              Discos
-            </p>
-            <span className="text-[10px] text-zinc-500 font-medium hidden lg:inline">
-              Reordenar
-            </span>
+        <nav className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar">
+          {/* Selector de Pestañas Globales */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setActiveTab("catalog")}
+              className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                activeTab === "catalog" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/40 hover:text-white"
+              }`}
+            >
+              <Music className="w-4 h-4 text-emerald-400" />
+              Catálogo de Música
+            </button>
+            <button
+              onClick={() => setActiveTab("marketplace")}
+              className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                activeTab === "marketplace" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/40 hover:text-white"
+              }`}
+            >
+              <Store className="w-4 h-4 text-[#FFC400]" />
+              Marketplace
+            </button>
           </div>
 
-          {localAlbums.map((album, index) => {
-            const active = album.id === selectedId;
-            const isDropTarget = dropTargetId === album.id;
-            const isAlbumDragging = draggedAlbumIndex === index;
-            const isAlbumOver = overAlbumIndex === index && draggedAlbumIndex !== null && draggedAlbumIndex !== index;
-
-            return (
-              <div
-                key={album.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, index, album.id)}
-                onDragOver={(e) => handleDragOver(e, index, album.id)}
-                onDragLeave={() => {
-                  if (dragItemIndex.current === null) {
-                    setDropTargetId(null);
-                  }
-                }}
-                onDragEnd={handleDragEnd}
-                onDrop={(e) => handleDrop(e, index, album)}
-                className={`group relative flex items-center gap-1.5 w-full px-2 py-2 rounded-lg transition-all border ${
-                  isAlbumDragging
-                    ? "opacity-30 border-dashed border-emerald-500/60 bg-zinc-900"
-                    : isAlbumOver
-                    ? "border-emerald-500 bg-emerald-950/60 text-white scale-[1.02] shadow-lg shadow-emerald-950/50"
-                    : isDropTarget
-                    ? "bg-emerald-900/40 border-emerald-500/50 text-white"
-                    : active
-                    ? "bg-zinc-900 border-zinc-800 text-white"
-                    : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
-                }`}
-              >
-                {/* Grab handle icon */}
-                <div
-                  className="cursor-grab active:cursor-grabbing text-zinc-600 group-hover:text-zinc-300 p-0.5 shrink-0 transition-colors select-none"
-                  title="Arrastra para reordenar disco"
-                >
-                  <GripVertical className="w-4 h-4" />
-                </div>
-
-                <div
-                  onClick={() => setSelectedId(album.id)}
-                  className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer select-none"
-                >
-                  {(movingTrack && isDropTarget) || (reorderingAlbums && isAlbumOver) ? (
-                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-10">
-                      <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
-                    </div>
-                  ) : null}
-
-                  {album.coverImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={album.coverImage.replace('/brand/', '/cd/')}
-                      alt=""
-                      className="w-9 h-9 rounded object-cover shrink-0 pointer-events-none"
-                    />
-                  ) : (
-                    <div className="w-9 h-9 rounded bg-zinc-800 shrink-0 pointer-events-none" />
-                  )}
-                  <div className="min-w-0 flex-1 pointer-events-none">
-                    <span className="block text-sm font-semibold truncate">{album.title}</span>
-                    <span className="block text-xs text-zinc-500 truncate">
-                      {album.tracks.length} canciones
-                    </span>
-                  </div>
-                  {album.disabled && (
-                    <span className="text-[9px] font-bold uppercase text-emerald-400/80 pointer-events-none shrink-0">
-                      Pronto
-                    </span>
-                  )}
-                </div>
-
-                {/* Controles rápidos arriba / abajo */}
-                <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      moveAlbum(index, "up");
-                    }}
-                    disabled={index === 0}
-                    className="p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                    title="Mover arriba"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      moveAlbum(index, "down");
-                    }}
-                    disabled={index === localAlbums.length - 1}
-                    className="p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
-                    title="Mover abajo"
-                  >
-                    <ChevronDown className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+          {activeTab === "catalog" ? (
+            <div className="space-y-1 pt-3 border-t border-zinc-900/80">
+              <div className="flex items-center justify-between px-3 py-2">
+                <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">
+                  Discos
+                </p>
+                <span className="text-[10px] text-zinc-500 font-medium hidden lg:inline">
+                  Reordenar
+                </span>
               </div>
-            );
-          })}
 
-          {/* Botón Crear Disco */}
-          <button
-            type="button"
-            onClick={() => {
-              setCreateTitle("");
-              setCreateIntro("");
-              setCreateDetails("");
-              setShowCreateDrawer(true);
-            }}
-            className="flex items-center gap-2.5 w-full px-3 py-2.5 mt-2 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:border-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-950/30 transition-all cursor-pointer group/create"
-          >
-            <div className="w-9 h-9 rounded bg-zinc-800 border border-dashed border-zinc-600 group-hover/create:border-emerald-500/50 flex items-center justify-center shrink-0 transition-colors">
-              <Plus className="w-4 h-4" />
+              {localAlbums.map((album, index) => {
+                const active = album.id === selectedId;
+                const isDropTarget = dropTargetId === album.id;
+                const isAlbumDragging = draggedAlbumIndex === index;
+                const isAlbumOver = overAlbumIndex === index && draggedAlbumIndex !== null && draggedAlbumIndex !== index;
+
+                return (
+                  <div
+                    key={album.id}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, index, album.id)}
+                    onDragOver={(e) => handleDragOver(e, index, album.id)}
+                    onDragLeave={() => {
+                      if (dragItemIndex.current === null) {
+                        setDropTargetId(null);
+                      }
+                    }}
+                    onDragEnd={handleDragEnd}
+                    onDrop={(e) => handleDrop(e, index, album)}
+                    className={`group relative flex items-center gap-1.5 w-full px-2 py-2 rounded-lg transition-all border ${
+                      isAlbumDragging
+                        ? "opacity-30 border-dashed border-emerald-500/60 bg-zinc-900"
+                        : isAlbumOver
+                        ? "border-emerald-500 bg-emerald-950/60 text-white scale-[1.02] shadow-lg shadow-emerald-950/50"
+                        : isDropTarget
+                        ? "bg-emerald-900/40 border-emerald-500/50 text-white"
+                        : active
+                        ? "bg-zinc-900 border-zinc-800 text-white"
+                        : "border-transparent text-zinc-400 hover:bg-zinc-900/50 hover:text-white"
+                    }`}
+                  >
+                    {/* Grab handle icon */}
+                    <div
+                      className="cursor-grab active:cursor-grabbing text-zinc-600 group-hover:text-zinc-300 p-0.5 shrink-0 transition-colors select-none"
+                      title="Arrastra para reordenar disco"
+                    >
+                      <GripVertical className="w-4 h-4" />
+                    </div>
+
+                    <div
+                      onClick={() => setSelectedId(album.id)}
+                      className="flex items-center gap-2.5 flex-1 min-w-0 text-left cursor-pointer select-none"
+                    >
+                      {(movingTrack && isDropTarget) || (reorderingAlbums && isAlbumOver) ? (
+                        <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-10">
+                          <Loader2 className="w-4 h-4 text-emerald-400 animate-spin" />
+                        </div>
+                      ) : null}
+
+                      {album.coverImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={album.coverImage.replace('/brand/', '/cd/')}
+                          alt=""
+                          className="w-9 h-9 rounded object-cover shrink-0 pointer-events-none"
+                        />
+                      ) : (
+                        <div className="w-9 h-9 rounded bg-zinc-800 shrink-0 pointer-events-none" />
+                      )}
+                      <div className="min-w-0 flex-1 pointer-events-none">
+                        <span className="block text-sm font-semibold truncate">{album.title}</span>
+                        <span className="block text-xs text-zinc-500 truncate">
+                          {album.tracks.length} canciones
+                        </span>
+                      </div>
+                      {album.disabled && (
+                        <span className="text-[9px] font-bold uppercase text-emerald-400/80 pointer-events-none shrink-0">
+                          Pronto
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Controles rápidos arriba / abajo */}
+                    <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveAlbum(index, "up");
+                        }}
+                        disabled={index === 0}
+                        className="p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                        title="Mover arriba"
+                      >
+                        <ChevronUp className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          moveAlbum(index, "down");
+                        }}
+                        disabled={index === localAlbums.length - 1}
+                        className="p-0.5 text-zinc-500 hover:text-white hover:bg-zinc-800 rounded disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                        title="Mover abajo"
+                      >
+                        <ChevronDown className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Botón Crear Disco */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateTitle("");
+                  setCreateIntro("");
+                  setCreateDetails("");
+                  setShowCreateDrawer(true);
+                }}
+                className="flex items-center gap-2.5 w-full px-3 py-2.5 mt-2 rounded-lg border border-dashed border-zinc-700 text-zinc-400 hover:border-emerald-500/60 hover:text-emerald-400 hover:bg-emerald-950/30 transition-all cursor-pointer group/create"
+              >
+                <div className="w-9 h-9 rounded bg-zinc-800 border border-dashed border-zinc-600 group-hover/create:border-emerald-500/50 flex items-center justify-center shrink-0 transition-colors">
+                  <Plus className="w-4 h-4" />
+                </div>
+                <span className="text-sm font-semibold">Crear disco</span>
+              </button>
             </div>
-            <span className="text-sm font-semibold">Crear disco</span>
-          </button>
+          ) : (
+            <div className="space-y-1 pt-3 border-t border-zinc-900/80">
+              <div className="px-3 py-2">
+                <p className="text-[10px] uppercase tracking-widest text-zinc-600 font-bold">
+                  Artículos
+                </p>
+                <span className="block text-xs text-zinc-500 mt-2 font-medium">
+                  {marketplaceProducts.length} productos en tienda
+                </span>
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className="p-3 border-t border-zinc-900">
@@ -536,36 +600,46 @@ function Dashboard({
       {/* Contenido principal */}
       <main className="flex-1 overflow-y-auto bg-zinc-950 custom-scrollbar">
         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6 md:space-y-8">
-          {/* Encabezado global */}
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-black text-white">Gestión de discos</h1>
-              <p className="text-zinc-400 text-sm mt-1">
-                Arrastra las canciones para reordenarlas y guarda para actualizar el home.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
-              <BarChart3 className="w-4 h-4 text-emerald-400" />
-              <div className="text-right">
-                <span className="block text-lg font-black text-white leading-none">
-                  {totalPlays.toLocaleString("es")}
-                </span>
-                <span className="block text-[10px] text-zinc-500 uppercase tracking-wider">
-                  reproducciones totales
-                </span>
+          {activeTab === "catalog" ? (
+            <>
+              {/* Encabezado global */}
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-black text-white">Gestión de discos</h1>
+                  <p className="text-zinc-400 text-sm mt-1">
+                    Arrastra las canciones para reordenarlas y guarda para actualizar el home.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5">
+                  <BarChart3 className="w-4 h-4 text-emerald-400" />
+                  <div className="text-right">
+                    <span className="block text-lg font-black text-white leading-none">
+                      {totalPlays.toLocaleString("es")}
+                    </span>
+                    <span className="block text-[10px] text-zinc-500 uppercase tracking-wider">
+                      reproducciones totales
+                    </span>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
 
-          {/* La key incluye la membresía de pistas: al subir o mover una canción
-              el editor se remonta con la lista fresca (el orden no remonta). */}
-          {selected && (
-            <AlbumEditor
-              key={`${selected.id}:${selected.tracks.map((t) => t.id).sort((a, b) => a - b).join("-")}`}
-              album={selected}
-              allAlbums={albums}
-              onSaved={onReload}
-              onDeleted={handleAlbumDeleted}
+              {/* La key incluye la membresía de pistas: al subir o mover una canción
+                  el editor se remonta con la lista fresca (el orden no remonta). */}
+              {selected && (
+                <AlbumEditor
+                  key={`${selected.id}:${selected.tracks.map((t) => t.id).sort((a, b) => a - b).join("-")}`}
+                  album={selected}
+                  allAlbums={albums}
+                  onSaved={onReload}
+                  onDeleted={handleAlbumDeleted}
+                />
+              )}
+            </>
+          ) : (
+            <MarketplaceEditor
+              products={marketplaceProducts}
+              onReload={loadMarketplace}
+              showToast={showToast}
             />
           )}
         </div>
@@ -684,6 +758,391 @@ function Dashboard({
                   <span>Crear disco</span>
                 </button>
               </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ========================================================================= */
+/* EDITOR DE MARKETPLACE                                                     */
+/* ========================================================================= */
+interface MarketplaceEditorProps {
+  products: any[];
+  onReload: () => void;
+  showToast: (msg: string) => void;
+}
+
+function MarketplaceEditor({ products, onReload, showToast }: MarketplaceEditorProps) {
+  const [showDrawer, setShowDrawer] = useState(false);
+  const [name, setName] = useState("");
+  const [category, setCategory] = useState("Música");
+  const [price, setPrice] = useState("");
+  const [description, setDescription] = useState("");
+  
+  // Image upload state
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageStorageId, setImageStorageId] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const categories = ["Música", "Ropa", "Pósteres", "Accesorios"];
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingImage(true);
+    try {
+      const urlRes = await fetch("/api/management/image-upload-url", { method: "POST" });
+      if (!urlRes.ok) return;
+      const { uploadUrl } = await urlRes.json();
+
+      const upRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!upRes.ok) return;
+      const { storageId } = await upRes.json();
+
+      setImageStorageId(storageId);
+      // Create local URL for preview
+      setImagePreview(URL.createObjectURL(file));
+    } catch (err) {
+      console.error("Error al subir imagen:", err);
+      showToast("Error al subir la imagen");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCreateProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !category || !price || saving) return;
+    
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice < 0) {
+      showToast("Precio inválido");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/management/create-marketplace-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          category,
+          price: parsedPrice,
+          description: description.trim() || undefined,
+          imageStorageId: imageStorageId || undefined,
+        }),
+      });
+
+      if (res.ok) {
+        showToast("Producto agregado correctamente");
+        setName("");
+        setPrice("");
+        setDescription("");
+        setImageStorageId(null);
+        setImagePreview(null);
+        setShowDrawer(false);
+        onReload();
+      } else {
+        const data = await res.json();
+        showToast(data.error || "Error al agregar producto");
+      }
+    } catch (err) {
+      console.error("Error al guardar producto:", err);
+      showToast("Error al conectar con el servidor");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm("¿Estás seguro de que deseas eliminar este producto?")) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch("/api/management/delete-marketplace-product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+
+      if (res.ok) {
+        showToast("Producto eliminado");
+        onReload();
+      } else {
+        showToast("Error al eliminar producto");
+      }
+    } catch (err) {
+      console.error("Error al eliminar producto:", err);
+      showToast("Error de conexión");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  return (
+    <div className="space-y-6 md:space-y-8 animate-fade-in">
+      {/* Header local */}
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-white">Gestión de Marketplace</h1>
+          <p className="text-zinc-400 text-sm mt-1">
+            Administra los productos de merchandising oficial y copias físicas de conexión.
+          </p>
+        </div>
+        
+        <button
+          onClick={() => {
+            setName("");
+            setCategory("Música");
+            setPrice("");
+            setDescription("");
+            setImageStorageId(null);
+            setImagePreview(null);
+            setShowDrawer(true);
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-[#FFC400] hover:bg-[#FFD54F] text-black font-bold text-xs rounded-full transition-all cursor-pointer shadow-lg shadow-[#FFC400]/15"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Agregar Artículo</span>
+        </button>
+      </div>
+
+      {/* Grid de Productos */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.map((product) => (
+          <div
+            key={product.id}
+            className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden flex flex-col group relative"
+          >
+            {/* Botón Eliminar en Hover */}
+            <button
+              onClick={() => handleDeleteProduct(product.id)}
+              disabled={deletingId === product.id}
+              className="absolute top-3 right-3 p-2 bg-black/60 hover:bg-red-500/25 border border-zinc-800 text-zinc-400 hover:text-red-400 rounded-full transition-colors z-20 cursor-pointer disabled:opacity-50"
+              title="Eliminar producto"
+            >
+              {deletingId === product.id ? (
+                <Loader2 className="w-4 h-4 animate-spin text-red-400" />
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+            </button>
+
+            {/* Img de preview */}
+            <div className="w-full aspect-square bg-zinc-950 flex items-center justify-center relative border-b border-zinc-900">
+              {product.image ? (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={product.image.startsWith("bg-") || product.image === "cero" || product.image === "doble-cero" || product.image === "geminis" || product.image === "vertical" ? "/cd/cover_cover_conexion.png" : product.image}
+                  alt={product.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Store className="w-12 h-12 text-zinc-800" />
+              )}
+            </div>
+
+            {/* Detalles */}
+            <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{product.category}</span>
+                <h4 className="font-bold text-sm text-white truncate">{product.name}</h4>
+                {product.description && (
+                  <p className="text-zinc-500 text-xs leading-relaxed line-clamp-2">{product.description}</p>
+                )}
+              </div>
+
+              <div className="pt-1 mt-auto flex items-center justify-between border-t border-zinc-900/60">
+                <span className="text-sm font-black text-white font-mono">
+                  ${product.price.toFixed(2)} USD
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {products.length === 0 && (
+          <div className="col-span-full py-16 text-center text-zinc-500 border border-dashed border-zinc-800 rounded-2xl bg-zinc-900/10">
+            No hay productos en el catálogo del Marketplace. ¡Crea el primero!
+          </div>
+        )}
+      </div>
+
+      {/* Drawer Formulario de Creación */}
+      {showDrawer && (
+        <div className="fixed inset-0 z-50 overflow-hidden">
+          <div
+            className="absolute inset-0 bg-black/65 backdrop-blur-xs transition-opacity animate-in fade-in"
+            onClick={() => !saving && !uploadingImage && setShowDrawer(false)}
+          />
+
+          <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+            <div className="w-screen max-w-lg bg-zinc-950 border-l border-zinc-800 shadow-2xl flex flex-col justify-between animate-in slide-in-from-right duration-300">
+              
+              <form onSubmit={handleCreateProductSubmit} className="flex flex-col h-full justify-between">
+                
+                {/* Header Drawer */}
+                <div className="p-6 border-b border-zinc-900 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400">
+                      <Plus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-white">Agregar Producto</h3>
+                      <p className="text-xs text-zinc-400">Añade un nuevo artículo al Marketplace</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowDrawer(false)}
+                    className="p-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Form fields */}
+                <div className="p-6 flex-1 overflow-y-auto space-y-6 custom-scrollbar">
+                  
+                  {/* Name field */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                      Nombre del Producto *
+                    </label>
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ej. Vinilo 'Vertical' Edición Colección"
+                      required
+                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#FFC400] rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  {/* Category select */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                      Categoría *
+                    </label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#FFC400] rounded-xl p-3.5 text-sm text-white focus:outline-none transition-colors cursor-pointer"
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Price field */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                      Precio (USD) *
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="0.00"
+                        required
+                        className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#FFC400] rounded-xl pl-8 pr-4 py-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Image field */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                      Imagen del Producto
+                    </label>
+                    
+                    <div className="flex gap-4 items-center">
+                      <div className="w-20 h-20 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden flex items-center justify-center shrink-0">
+                        {imagePreview ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <Store className="w-6 h-6 text-zinc-700" />
+                        )}
+                      </div>
+
+                      <label className="flex items-center gap-2 px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white transition-colors cursor-pointer">
+                        {uploadingImage ? (
+                          <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        <span>{uploadingImage ? "Subiendo..." : "Subir Foto"}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          disabled={uploadingImage}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Description field */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300">
+                      Descripción (Opcional)
+                    </label>
+                    <textarea
+                      rows={4}
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Breve descripción del producto para la tienda pública..."
+                      className="w-full bg-zinc-900 border border-zinc-800 focus:border-[#FFC400] rounded-xl p-3.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors leading-relaxed"
+                    />
+                  </div>
+
+                </div>
+
+                {/* Footer buttons */}
+                <div className="p-6 border-t border-zinc-900 bg-zinc-950 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    disabled={saving || uploadingImage}
+                    onClick={() => setShowDrawer(false)}
+                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving || uploadingImage || !name.trim() || !price}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#FFC400] hover:bg-[#FFD54F] text-black font-bold text-xs rounded-full transition-all cursor-pointer shadow-lg shadow-[#FFC400]/25 disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4" />
+                    )}
+                    <span>Guardar Producto</span>
+                  </button>
+                </div>
+
+              </form>
 
             </div>
           </div>
@@ -1478,6 +1937,7 @@ function AlbumEditor({
           }}
         />
       )}
+
 
       {/* Modal de confirmación para eliminar disco */}
       {showDeleteConfirm && (

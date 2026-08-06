@@ -18,6 +18,9 @@ import {
   updateTrackDetails,
   updateAlbumDetails,
   generateImageUploadUrl,
+  getMarketplaceProducts,
+  createMarketplaceProduct,
+  deleteMarketplaceProduct,
 } from "@/lib/catalog";
 
 import { execFileSync } from "node:child_process";
@@ -64,6 +67,17 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     const albums = await getCatalogWithStats();
     return NextResponse.json(
       { albums },
+      { headers: { "Cache-Control": "no-store" } }
+    );
+  }
+
+  if (endpoint === "marketplace") {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    }
+    const products = await getMarketplaceProducts();
+    return NextResponse.json(
+      { products },
       { headers: { "Cache-Control": "no-store" } }
     );
   }
@@ -267,6 +281,64 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     }
 
     const result = await deleteAlbum(albumId);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "create-marketplace-product") {
+    let body: { name?: unknown; category?: unknown; price?: unknown; description?: unknown; imageStorageId?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    const name = typeof body.name === "string" ? body.name.trim() : "";
+    const category = typeof body.category === "string" ? body.category.trim() : "";
+    const price = Number(body.price);
+    const description = typeof body.description === "string" ? body.description.trim() : undefined;
+    const imageStorageId = typeof body.imageStorageId === "string" && body.imageStorageId ? body.imageStorageId : undefined;
+
+    if (!name) {
+      return NextResponse.json({ error: "El nombre es requerido" }, { status: 400 });
+    }
+    if (!category) {
+      return NextResponse.json({ error: "La categoría es requerida" }, { status: 400 });
+    }
+    if (isNaN(price) || price < 0) {
+      return NextResponse.json({ error: "El precio debe ser un número válido positivo" }, { status: 400 });
+    }
+
+    const result = await createMarketplaceProduct({
+      name,
+      category,
+      price,
+      description,
+      imageStorageId,
+    });
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, id: result.id });
+  }
+
+  if (endpoint === "delete-marketplace-product") {
+    let id = "";
+    try {
+      const body = await request.json();
+      id = typeof body?.id === "string" ? body.id.trim() : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "El id es requerido" }, { status: 400 });
+    }
+
+    const result = await deleteMarketplaceProduct(id);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }

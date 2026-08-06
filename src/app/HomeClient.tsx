@@ -46,6 +46,84 @@ const SLIDES = [
 ];
 const SLIDE_INTERVAL_MS = 6000;
 
+interface MarketplaceProduct {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  image: string;
+  description: string;
+}
+
+const MARKETPLACE_CATEGORIES = ["Todos", "Música", "Ropa", "Pósteres", "Accesorios"];
+
+const MARKETPLACE_PRODUCTS: MarketplaceProduct[] = [
+  {
+    id: "prod-vinyl-cero",
+    name: "Vinilo 'Cero' (Edición Especial)",
+    category: "Música",
+    price: 34.99,
+    image: "cero",
+    description: "Vinilo de 180 gramos color negro translúcido. Incluye libreto con letras ilustradas."
+  },
+  {
+    id: "prod-cd-doblecero",
+    name: "CD 'Doble Cero' (Digipack)",
+    category: "Música",
+    price: 14.99,
+    image: "doble-cero",
+    description: "Formato CD de tres paneles con libreto exclusivo de 16 páginas."
+  },
+  {
+    id: "prod-vinyl-geminis",
+    name: "Vinilo 'Géminis' (Doble Color)",
+    category: "Música",
+    price: 38.99,
+    image: "geminis",
+    description: "Edición coleccionista en doble vinilo color verde y negro marmoleado."
+  },
+  {
+    id: "prod-tshirt-cero",
+    name: "Camiseta 'Cero' Grunge",
+    category: "Ropa",
+    price: 24.99,
+    image: "bg-gradient-to-br from-zinc-900 via-zinc-800 to-emerald-950",
+    description: "Camiseta 100% algodón lavado tipo vintage con el logotipo del disco Cero en el pecho."
+  },
+  {
+    id: "prod-hoodie-logo",
+    name: "Sudadera Oversize Logo",
+    category: "Ropa",
+    price: 49.99,
+    image: "bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-850",
+    description: "Sudadera con capucha ultra cómoda de alto gramaje con bordado de la banda."
+  },
+  {
+    id: "prod-poster-cero",
+    name: "Póster Serigrafiado 'Cero'",
+    category: "Pósteres",
+    price: 19.99,
+    image: "bg-gradient-to-br from-zinc-950 to-emerald-900/60",
+    description: "Póster de 50x70 cm impreso a mano en papel de alta calidad. Numerado y firmado."
+  },
+  {
+    id: "prod-tote-bag",
+    name: "Tote Bag Conexión",
+    category: "Accesorios",
+    price: 12.99,
+    image: "bg-gradient-to-br from-zinc-900 to-zinc-950",
+    description: "Bolsa de tela de algodón orgánico negro con asas reforzadas."
+  },
+  {
+    id: "prod-vinyl-vertical",
+    name: "Vinilo 'Vertical'",
+    category: "Música",
+    price: 32.99,
+    image: "vertical",
+    description: "Edición estándar en vinilo negro de 140g del último lanzamiento."
+  }
+];
+
 const BACKGROUNDS = [
   ...SLIDES,
   '/cd/bg-conexion-cover.png',
@@ -106,7 +184,13 @@ function BackgroundCrossfade({ currentBg }: { currentBg: string }) {
   );
 }
 
-export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
+export default function HomeClient({
+  albums,
+  initialProducts,
+}: {
+  albums: AlbumWithStats[];
+  initialProducts?: any[];
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoaded, setIsLoaded] = useState(false);
@@ -141,6 +225,9 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
   const [isUniversoOpen, setIsUniversoOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState("Todos");
+  const [marketplaceProducts, setMarketplaceProducts] = useState<any[]>(initialProducts && initialProducts.length > 0 ? initialProducts : MARKETPLACE_PRODUCTS);
+  const [hoveredProximamente, setHoveredProximamente] = useState(false);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const toggleDetails = (id: string) => setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   const mainRef = useRef<HTMLDivElement>(null);
@@ -198,6 +285,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
       setIsAboutOpen(false);
       setIsMarketplaceOpen(true);
       setIsUniversoOpen(false);
+      setSelectedCategory("Todos");
       setSelectedAlbum(null);
       setSelectedTrackForLyrics(null);
       return;
@@ -916,7 +1004,7 @@ Que viaja directo a tu dirección.`;
             </div>
           ) : isMarketplaceOpen ? (
             /* ========================================================================= */
-            /* MARKETPLACE VIEW (Coming Soon Empty State)                                */
+            /* MARKETPLACE VIEW                                                          */
             /* ========================================================================= */
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center min-h-full">
               {/* Sticky Header back button */}
@@ -932,18 +1020,71 @@ Que viaja directo a tu dirección.`;
                 </div>
               </div>
 
-              {/* Centered Content */}
-              <div className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-lg mx-auto py-16 md:py-24 space-y-6">
-                <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl relative group">
-                  <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl group-hover:bg-emerald-500/20 transition-all animate-pulse" />
-                  <Store className="w-10 h-10 text-emerald-400 relative z-10" />
-                </div>
-                <div className="space-y-2">
-                  <span className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase">PRÓXIMAMENTE</span>
-                  <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">Marketplace Oficial</h2>
-                  <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
-                    Consigue la discografía física, pósteres oficiales y merchandising exclusivo de conexión en un solo lugar.
+              {/* Marketplace Main Container (Max width 880px, same as albums, centered) */}
+              <div className="w-full max-w-[880px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 py-8 pb-44 flex flex-col gap-8">
+
+                {/* Header Title */}
+                <div className="space-y-1 text-center lg:text-left">
+                  <span className="text-xs font-bold tracking-widest text-[#FFC400] uppercase">TIENDA OFICIAL</span>
+                  <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight">Marketplace</h1>
+                  <p className="text-zinc-400 text-sm max-w-xl">
+                    Adquiere lanzamientos oficiales en formato físico y merchandising original de Conexión.
                   </p>
+                </div>
+
+                {/* Products Grid (2 columns on mobile, 3 columns on desktop) */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
+                  {marketplaceProducts.map((product) => {
+                    const album = albums.find((a) => a.id === product.image);
+                    return (
+                      <div
+                        key={product.id}
+                        className="bg-zinc-900/35 backdrop-blur-sm border border-zinc-800/60 rounded-2xl overflow-hidden flex flex-col hover:border-zinc-700/60 transition-all group hover:-translate-y-0.5 shadow-lg shadow-black/20"
+                      >
+                        {/* Image Container (Ratio square) */}
+                        <div className="w-full aspect-square bg-zinc-950 overflow-hidden relative border-b border-zinc-900 flex items-center justify-center">
+                          <div className="w-full h-full transform group-hover:scale-105 transition-transform duration-500 ease-out">
+                            {album ? (
+                              renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full object-cover", album.coverImage)
+                            ) : product.image && (product.image.startsWith("http") || product.image.startsWith("/")) ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className={`w-full h-full ${product.image || "bg-zinc-900"} flex items-center justify-center relative`}>
+                                <Store className="w-8 h-8 text-zinc-600/40" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Text & Price Details */}
+                        <div className="p-3 md:p-4 flex-1 flex flex-col justify-between gap-3">
+                          <div className="space-y-1">
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{product.category}</span>
+                            <h4 className="font-bold text-xs md:text-sm text-white group-hover:text-[#FFC400] transition-colors leading-snug line-clamp-1">
+                              {product.name}
+                            </h4>
+                          </div>
+
+                          <div className="flex flex-col gap-2 pt-1 mt-auto">
+                            <span className="text-sm md:text-base font-black text-white font-mono">
+                              ${product.price.toFixed(2)} USD
+                            </span>
+                            <button
+                              onClick={() => alert(`Añadido al carrito: ${product.name}`)}
+                              className="w-full py-1.5 md:py-2 text-[10px] md:text-xs font-black uppercase tracking-wider bg-[#FFC400] hover:bg-[#FFD54F] text-black rounded-lg transition-all active:scale-[0.98] shadow-md shadow-[#FFC400]/5 cursor-pointer text-center"
+                            >
+                              Comprar
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -952,6 +1093,21 @@ Que viaja directo a tu dirección.`;
             /* UNIVERSO VIEW (Coming Soon Empty State)                                   */
             /* ========================================================================= */
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center min-h-full">
+              {/* BACKGROUND IMAGE (Top-Centered with Crossfade) */}
+              <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10 flex items-start justify-center">
+                <div className="relative w-[1300px] h-auto flex items-start justify-center">
+                  <img
+                    src="/universe/dark.png"
+                    alt=""
+                    className={`w-full h-auto transition-opacity duration-300 ease-in-out ${hoveredProximamente ? 'opacity-0' : 'opacity-100'}`}
+                  />
+                  <img
+                    src="/universe/light.png"
+                    alt=""
+                    className={`absolute inset-0 w-full h-auto transition-opacity duration-300 ease-in-out ${hoveredProximamente ? 'opacity-100' : 'opacity-0'}`}
+                  />
+                </div>
+              </div>
               {/* Sticky Header back button */}
               <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
                 <div className="max-w-[880px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
@@ -967,12 +1123,18 @@ Que viaja directo a tu dirección.`;
 
               {/* Centered Content */}
               <div className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-lg mx-auto py-16 md:py-24 space-y-6">
-                <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl relative group">
+                {/* <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl relative group">
                   <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl group-hover:bg-emerald-500/20 transition-all animate-pulse" />
                   <Globe className="w-10 h-10 text-emerald-400 relative z-10" />
-                </div>
+                </div> */}
                 <div className="space-y-2">
-                  <span className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase">PRÓXIMAMENTE</span>
+                  <span
+                    onMouseEnter={() => setHoveredProximamente(true)}
+                    onMouseLeave={() => setHoveredProximamente(false)}
+                    className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase cursor-help transition-all duration-300 hover:scale-105 active:scale-95"
+                  >
+                    PRÓXIMAMENTE
+                  </span>
                   <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">Universo Conexión</h2>
                   <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
                     Explora la historia profunda, letras comentadas, curiosidades y el trasfondo lírico de cada una de las canciones de conexión.
@@ -1116,7 +1278,7 @@ Que viaja directo a tu dirección.`;
                 ? "bg-zinc-950/95 border-b border-zinc-900/60 backdrop-blur-md"
                 : "bg-transparent border-b border-transparent"
                 }`}>
-                
+
                 {/* Centered Logo */}
                 <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 pointer-events-none z-40 ${showStickyHeader ? 'opacity-80' : 'opacity-0'}`}>
                   <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-5 md:h-6 w-auto shrink-0" />

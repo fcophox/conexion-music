@@ -491,3 +491,158 @@ export const updateAlbumDetails = mutation({
   },
 });
 
+export const getMarketplaceProducts = query({
+  args: {},
+  handler: async (ctx) => {
+    const products = await ctx.db.query("marketplace").collect();
+    products.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    return products.map(p => ({
+      id: String(p._id),
+      name: p.name,
+      category: p.category,
+      price: p.price,
+      description: p.description || "",
+      image: p.image,
+      imageStorageId: p.imageStorageId,
+    }));
+  },
+});
+
+export const addMarketplaceProduct = mutation({
+  args: {
+    name: v.string(),
+    category: v.string(),
+    price: v.number(),
+    description: v.optional(v.string()),
+    imageStorageId: v.optional(v.string()),
+  },
+  handler: async (ctx, { name, category, price, description, imageStorageId }) => {
+    const products = await ctx.db.query("marketplace").collect();
+    const sortOrder = products.length;
+
+    let imageUrl = undefined;
+    let storageId = undefined;
+    if (imageStorageId) {
+      storageId = imageStorageId as Id<"_storage">;
+      const url = await ctx.storage.getUrl(storageId);
+      if (url) {
+        imageUrl = url;
+      }
+    }
+
+    const productId = await ctx.db.insert("marketplace", {
+      name,
+      category,
+      price,
+      description,
+      image: imageUrl,
+      imageStorageId: storageId,
+      sortOrder,
+    });
+
+    return { ok: true, id: productId };
+  },
+});
+
+export const deleteMarketplaceProduct = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, { id }) => {
+    const product = await ctx.db.get(id as Id<"marketplace">);
+    if (!product) {
+      return { ok: false, error: "Producto no encontrado" };
+    }
+
+    if (product.imageStorageId) {
+      try {
+        await ctx.storage.delete(product.imageStorageId);
+      } catch (err) {
+        console.error("Error deleting product image from storage:", err);
+      }
+    }
+
+    await ctx.db.delete(product._id);
+    return { ok: true };
+  },
+});
+
+export const seedMarketplaceIfEmpty = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const existing = await ctx.db.query("marketplace").first();
+    if (existing) return { seeded: false };
+
+    const initialProducts = [
+      {
+        name: "Vinilo 'Cero' (Edición Especial)",
+        category: "Música",
+        price: 34.99,
+        image: "cero",
+        description: "Vinilo de 180 gramos color negro translúcido. Incluye libreto con letras ilustradas."
+      },
+      {
+        name: "CD 'Doble Cero' (Digipack)",
+        category: "Música",
+        price: 14.99,
+        image: "doble-cero",
+        description: "Formato CD de tres paneles con libreto exclusivo de 16 páginas."
+      },
+      {
+        name: "Vinilo 'Géminis' (Doble Color)",
+        category: "Música",
+        price: 38.99,
+        image: "geminis",
+        description: "Edición coleccionista en doble vinilo color verde y negro marmoleado."
+      },
+      {
+        name: "Camiseta 'Cero' Grunge",
+        category: "Ropa",
+        price: 24.99,
+        image: "bg-gradient-to-br from-zinc-900 via-zinc-800 to-emerald-950",
+        description: "Camiseta 100% algodón lavado tipo vintage con el logotipo del disco Cero en el pecho."
+      },
+      {
+        name: "Sudadera Oversize Logo",
+        category: "Ropa",
+        price: 49.99,
+        image: "bg-gradient-to-br from-zinc-950 via-zinc-900 to-zinc-850",
+        description: "Sudadera con capucha ultra cómoda de alto gramaje con bordado de la banda."
+      },
+      {
+        name: "Póster Serigrafiado 'Cero'",
+        category: "Pósteres",
+        price: 19.99,
+        image: "bg-gradient-to-br from-zinc-950 to-emerald-900/60",
+        description: "Póster de 50x70 cm impreso a mano en papel de alta calidad. Numerado y firmado."
+      },
+      {
+        name: "Tote Bag Conexión",
+        category: "Accesorios",
+        price: 12.99,
+        image: "bg-gradient-to-br from-zinc-900 to-zinc-950",
+        description: "Bolsa de tela de algodón orgánico negro con asas reforzadas."
+      },
+      {
+        name: "Vinilo 'Vertical'",
+        category: "Música",
+        price: 32.99,
+        image: "vertical",
+        description: "Edición estándar en vinilo negro de 140g del último lanzamiento."
+      }
+    ];
+
+    for (let i = 0; i < initialProducts.length; i++) {
+      const p = initialProducts[i];
+      await ctx.db.insert("marketplace", {
+        name: p.name,
+        category: p.category,
+        price: p.price,
+        description: p.description,
+        image: p.image,
+        sortOrder: i,
+      });
+    }
+
+    return { seeded: true };
+  },
+});
+

@@ -249,3 +249,43 @@ export async function addTrack(track: {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+export async function seedMarketplaceIfEmpty() {
+  try {
+    await convex.mutation(api.catalog.seedMarketplaceIfEmpty, {});
+  } catch (error) {
+    console.error("Error seeding Convex marketplace database:", error);
+  }
+}
+
+export async function getMarketplaceProducts() {
+  await seedMarketplaceIfEmpty();
+  try {
+    return await convex.query(api.catalog.getMarketplaceProducts, {});
+  } catch (error) {
+    console.error("Error fetching marketplace products from Convex:", error);
+    return [];
+  }
+}
+
+export async function createMarketplaceProduct(product: {
+  name: string;
+  category: string;
+  price: number;
+  description?: string;
+  imageStorageId?: string;
+}): Promise<{ ok: boolean; id?: string; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.addMarketplaceProduct, product);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function deleteMarketplaceProduct(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.deleteMarketplaceProduct, { id });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
