@@ -23,7 +23,9 @@ import {
   Clock,
   Calendar,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Store,
+  Globe
 } from "lucide-react";
 
 function slugify(text: string) {
@@ -137,6 +139,8 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithStats | null>(null);
   const [isAboutOpen, setIsAboutOpen] = useState(false);
+  const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+  const [isUniversoOpen, setIsUniversoOpen] = useState(false);
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const toggleDetails = (id: string) => setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   const mainRef = useRef<HTMLDivElement>(null);
@@ -185,11 +189,29 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
     if (view === "about") {
       setIsAboutOpen(true);
+      setIsMarketplaceOpen(false);
+      setIsUniversoOpen(false);
+      setSelectedAlbum(null);
+      setSelectedTrackForLyrics(null);
+      return;
+    } else if (view === "marketplace") {
+      setIsAboutOpen(false);
+      setIsMarketplaceOpen(true);
+      setIsUniversoOpen(false);
+      setSelectedAlbum(null);
+      setSelectedTrackForLyrics(null);
+      return;
+    } else if (view === "universo") {
+      setIsAboutOpen(false);
+      setIsMarketplaceOpen(false);
+      setIsUniversoOpen(true);
       setSelectedAlbum(null);
       setSelectedTrackForLyrics(null);
       return;
     } else {
       setIsAboutOpen(false);
+      setIsMarketplaceOpen(false);
+      setIsUniversoOpen(false);
     }
 
     if (albumId) {
@@ -441,7 +463,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
     router.push("?view=about", { scroll: false });
   };
 
-  const isHomeActive = !isAboutOpen && selectedAlbum === null && selectedTrackForLyrics === null;
+  const isHomeActive = !isAboutOpen && !isMarketplaceOpen && !isUniversoOpen && selectedAlbum === null && selectedTrackForLyrics === null;
 
   // Estadísticas del catálogo (solo discos habilitados suenan, pero se cuentan todos)
   const enabledAlbums = albums.filter((a) => !a.disabled);
@@ -622,7 +644,7 @@ export default function HomeClient({ albums }: { albums: AlbumWithStats[] }) {
 
                 {/* Left Column: Cover and Info (Sticky on scroll) */}
                 <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 md:space-y-5 lg:sticky lg:top-20 lg:self-start">
-                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,28vh,300px)] lg:h-[clamp(220px,28vh,300px)] xl:w-[clamp(260px,34vh,360px)] xl:h-[clamp(260px,34vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 border border-zinc-800 flex items-center justify-center">
+                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,28vh,300px)] lg:h-[clamp(220px,28vh,300px)] xl:w-[clamp(260px,34vh,360px)] xl:h-[clamp(260px,34vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center">
                     {renderCoverArt(selectedTrackForLyrics.coverArtDesign, selectedTrackForLyrics.coverGradient, "w-full h-full", selectedTrackForLyrics.coverImage)}
                   </div>
 
@@ -802,7 +824,7 @@ Que viaja directo a tu dirección.`;
 
               {/* Sticky Header back button */}
               <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
-                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
+                <div className="max-w-[880px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
                   <button
                     onClick={() => updateUrl(null, null)}
                     className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
@@ -827,16 +849,16 @@ Que viaja directo a tu dirección.`;
               {/* Albums blocks */}
               <div className="w-full flex flex-col gap-12 md:gap-16 lg:gap-20 pb-44 md:pb-52 z-10 max-w-4xl">
                 {albums.map((album, index) => (
-                  <div key={album.id} className="w-full max-w-[1400px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative flex flex-col lg:flex-row gap-6 lg:gap-12">
+                  <div key={album.id} className="w-full max-w-[880px] mx-auto px-4 md:px-12 lg:px-16 xl:px-20 relative grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-12">
                     {/* Left Column: Cover */}
-                    <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3">
-                      <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,26vh,300px)] lg:h-[clamp(220px,26vh,300px)] xl:w-[clamp(260px,32vh,360px)] xl:h-[clamp(260px,32vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
+                    <div className="w-full lg:col-span-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3">
+                      <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
                         {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
                       </div>
                     </div>
 
                     {/* Right Column: Title, Intro & Description */}
-                    <div className="flex-1 w-full space-y-3">
+                    <div className="w-full lg:col-span-2 space-y-3">
                       {(() => {
                         const content = ALBUM_ABOUT_TEXTS[album.id] || ALBUM_ABOUT_TEXTS[slugify(album.title)] || (index === 4 ? ALBUM_ABOUT_TEXTS["blackout"] : undefined);
                         const isExpanded = !!expandedDetails[album.id];
@@ -892,6 +914,72 @@ Que viaja directo a tu dirección.`;
                 ))}
               </div>
             </div>
+          ) : isMarketplaceOpen ? (
+            /* ========================================================================= */
+            /* MARKETPLACE VIEW (Coming Soon Empty State)                                */
+            /* ========================================================================= */
+            <div className="relative z-10 w-full animate-fade-in flex flex-col items-center min-h-full">
+              {/* Sticky Header back button */}
+              <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
+                <div className="max-w-[880px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
+                  <button
+                    onClick={() => updateUrl(null, null)}
+                    className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-zinc-400 text-xs font-semibold">Volver al inicio</span>
+                </div>
+              </div>
+
+              {/* Centered Content */}
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-lg mx-auto py-16 md:py-24 space-y-6">
+                <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl relative group">
+                  <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl group-hover:bg-emerald-500/20 transition-all animate-pulse" />
+                  <Store className="w-10 h-10 text-emerald-400 relative z-10" />
+                </div>
+                <div className="space-y-2">
+                  <span className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase">PRÓXIMAMENTE</span>
+                  <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">Marketplace Oficial</h2>
+                  <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
+                    Consigue la discografía física, pósteres oficiales y merchandising exclusivo de conexión en un solo lugar.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : isUniversoOpen ? (
+            /* ========================================================================= */
+            /* UNIVERSO VIEW (Coming Soon Empty State)                                   */
+            /* ========================================================================= */
+            <div className="relative z-10 w-full animate-fade-in flex flex-col items-center min-h-full">
+              {/* Sticky Header back button */}
+              <div className="sticky top-0 py-3 flex items-center justify-between bg-zinc-950/85 backdrop-blur-md border-b border-zinc-900/40 w-full relative z-30">
+                <div className="max-w-[880px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center gap-4">
+                  <button
+                    onClick={() => updateUrl(null, null)}
+                    className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center"
+                  >
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <span className="text-zinc-400 text-xs font-semibold">Volver al inicio</span>
+                </div>
+              </div>
+
+              {/* Centered Content */}
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-4 max-w-lg mx-auto py-16 md:py-24 space-y-6">
+                <div className="w-20 h-20 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center shadow-2xl relative group">
+                  <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-xl group-hover:bg-emerald-500/20 transition-all animate-pulse" />
+                  <Globe className="w-10 h-10 text-emerald-400 relative z-10" />
+                </div>
+                <div className="space-y-2">
+                  <span className="inline-block px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-black tracking-widest text-emerald-400 uppercase">PRÓXIMAMENTE</span>
+                  <h2 className="text-2xl md:text-3xl font-black text-white leading-tight">Universo Conexión</h2>
+                  <p className="text-zinc-400 text-sm md:text-base leading-relaxed">
+                    Explora la historia profunda, letras comentadas, curiosidades y el trasfondo lírico de cada una de las canciones de conexión.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : selectedAlbum === null ? (
             /* ========================================================================= */
             /* HOME PAGE VIEW (Netflix-style hero + Discos row)                          */
@@ -919,7 +1007,7 @@ Que viaja directo a tu dirección.`;
                       <img
                         src="/brand/conexionlogo.svg"
                         alt="Conexión"
-                        className="h-12 md:h-14 lg:h-16 w-auto drop-shadow-2xl"
+                        className="h-9 md:h-11 lg:h-12 w-auto drop-shadow-2xl"
                       />
                     </div>
 
@@ -1024,11 +1112,17 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Sticky Header Controls & Summary Bar */}
-              <div className={`sticky top-0 z-30 py-3 flex items-center justify-between w-full transition-colors -mb-16 md:mb-0 ${showStickyHeader
+              <div className={`sticky top-0 z-30 py-3 flex items-center justify-between w-full transition-colors -mb-16 md:mb-0 relative ${showStickyHeader
                 ? "bg-zinc-950/95 border-b border-zinc-900/60 backdrop-blur-md"
                 : "bg-transparent border-b border-transparent"
                 }`}>
-                <div className="max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center justify-between">
+                
+                {/* Centered Logo */}
+                <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 pointer-events-none z-40 ${showStickyHeader ? 'opacity-80' : 'opacity-0'}`}>
+                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-5 md:h-6 w-auto shrink-0" />
+                </div>
+
+                <div className="max-w-[880px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center justify-between relative z-10">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => updateUrl(null, null)}
@@ -1059,7 +1153,7 @@ Que viaja directo a tu dirección.`;
               </div>
 
               {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[1400px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-44 md:pb-52">
+              <div className="flex flex-col max-w-[880px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-44 md:pb-52">
 
                 {/* Album Hero Info */}
                 <div className="relative pt-0 lg:pt-2 pb-4 md:pb-6 flex flex-col lg:flex-row items-center lg:items-end gap-5 md:gap-6 z-10">
@@ -1075,7 +1169,7 @@ Que viaja directo a tu dirección.`;
                   </div>
 
                   {/* DESKTOP COVER */}
-                  <div className="hidden md:flex md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-[clamp(120px,18vh,160px)] xl:h-[clamp(120px,18vh,160px)] shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800 z-10">
+                  <div className="hidden md:flex md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-[clamp(120px,18vh,160px)] xl:h-[clamp(120px,18vh,160px)] shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 z-10">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
@@ -1086,7 +1180,6 @@ Que viaja directo a tu dirección.`;
                       <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
                       <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 lg:h-8 w-auto opacity-80 shrink-0 hidden lg:block" />
                     </div>
-                    <p className="hidden md:block text-zinc-300 md:text-zinc-400 text-xs md:text-sm max-w-2xl leading-relaxed drop-shadow-md mx-auto lg:mx-0">{selectedAlbum.description}</p>
 
                     <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 md:gap-3 text-xs drop-shadow-md">
                       <div className="flex items-center gap-1 text-emerald-400 font-bold">
@@ -1109,8 +1202,7 @@ Que viaja directo a tu dirección.`;
                   <div className="w-full border-t border-zinc-900 mt-2">
 
                     <div className="grid grid-cols-12 gap-4 py-3 text-zinc-400 text-xs font-bold uppercase tracking-wider px-4 border-b border-zinc-900/60">
-                      <div className="col-span-1 text-center">#</div>
-                      <div className="col-span-7 md:col-span-6">Título</div>
+                      <div className="col-span-8 md:col-span-7">Título</div>
                       <div className="col-span-4 hidden md:block">Álbum</div>
                       <div className="col-span-4 md:col-span-1 text-right">Duración</div>
                     </div>
@@ -1128,29 +1220,8 @@ Que viaja directo a tu dirección.`;
                               }`}
                           >
 
-                            {/* Play/Index */}
-                            <div className="col-span-1 text-center font-semibold text-sm">
-                              {isTrackActive && isPlaying ? (
-                                <>
-                                  <div className="flex group-hover:hidden items-end justify-center gap-0.5 h-3 mx-auto w-4">
-                                    <span className="w-0.5 bg-emerald-500 h-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                                    <span className="w-0.5 bg-emerald-500 h-2/3 animate-bounce" style={{ animationDelay: '0.3s' }} />
-                                    <span className="w-0.5 bg-emerald-500 h-1/2 animate-bounce" style={{ animationDelay: '0.2s' }} />
-                                  </div>
-                                  <Pause className="w-3.5 h-3.5 text-white hidden group-hover:block mx-auto" />
-                                </>
-                              ) : (
-                                <>
-                                  <span className={`group-hover:hidden ${isTrackActive ? 'text-emerald-500' : 'text-zinc-500'}`}>
-                                    {index + 1}
-                                  </span>
-                                  <Play className="w-3.5 h-3.5 text-white hidden group-hover:block mx-auto" />
-                                </>
-                              )}
-                            </div>
-
                             {/* Title Info */}
-                            <div className="col-span-7 md:col-span-6 flex items-center gap-3 min-w-0">
+                            <div className="col-span-8 md:col-span-7 flex items-center gap-3 min-w-0">
                               <div className="w-10 h-10 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
                                 {renderCoverArt(track.coverArtDesign, track.coverGradient, "w-full h-full", track.coverImage)}
                               </div>
@@ -1207,7 +1278,7 @@ Que viaja directo a tu dirección.`;
         </main>
 
         {/* GLOBAL PLAYER BAR (floating glassmorphism pill, max 720px width, separated from bottom nav) */}
-        <div className="fixed bottom-[76px] md:bottom-[96px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5">
+        <div className="fixed bottom-[88px] md:bottom-[112px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5">
           <div className="flex items-center justify-between h-12 md:h-14 gap-3 md:gap-4 w-full">
 
             {/* Track info */}
@@ -1334,7 +1405,7 @@ Que viaja directo a tu dirección.`;
         </div>
 
         {/* BOTTOM NAVIGATION BAR (all screen sizes, per wireframe) */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-24 items-center z-50">
+        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-12 lg:gap-16 items-center z-50">
           <button
             onClick={goHome}
             className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isHomeActive ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
@@ -1356,42 +1427,59 @@ Que viaja directo a tu dirección.`;
             <Info className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Sobre conexión</span>
           </button>
+          <button
+            onClick={() => router.push("?view=marketplace", { scroll: false })}
+            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isMarketplaceOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+          >
+            <Store className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-[10px] md:text-[15px] font-medium">Marketplace</span>
+          </button>
+          <button
+            onClick={() => router.push("?view=universo", { scroll: false })}
+            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isUniversoOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+          >
+            <Globe className="w-5 h-5 md:w-6 md:h-6" />
+            <span className="text-[10px] md:text-[15px] font-medium">Universo</span>
+          </button>
         </nav>
 
         {/* SEARCH MODAL */}
         {isSearchOpen && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[100] flex items-start justify-center p-4 pt-20 md:pt-32 animate-fade-in">
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-[2px] z-[100] flex items-start justify-center p-4 pt-20 md:pt-32 animate-fade-in">
             {/* Backdrop click to close */}
             <div className="absolute inset-0" onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} />
 
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[60vh] relative z-10 animate-scale-in">
               {/* Modal Header */}
-              <div className="p-4 border-b border-zinc-800 flex items-center gap-3">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                  <input
-                    type="text"
-                    placeholder="¿Qué quieres escuchar?"
-                    autoFocus
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full bg-zinc-850 border border-zinc-700 text-white placeholder-zinc-500 rounded-lg px-4 py-2.5 pl-11 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
-                  />
-                  {searchQuery && (
-                    <button
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs font-semibold"
-                    >
-                      Limpiar
-                    </button>
-                  )}
+              <div className="p-4 border-b border-zinc-800 flex flex-col gap-3.5">
+                <h3 className="text-white font-bold text-base md:text-lg tracking-tight px-1">¿Buscas una canción?</h3>
+                <div className="flex items-center gap-3 w-full">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                    <input
+                      type="text"
+                      placeholder="¿Qué quieres escuchar?"
+                      autoFocus
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-zinc-850 border border-zinc-700 text-white placeholder-zinc-500 rounded-lg px-4 py-2.5 pl-11 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
+                    />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs font-semibold"
+                      >
+                        Limpiar
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }}
+                    className="text-xs text-zinc-400 hover:text-white px-3 py-2 rounded bg-zinc-850 border border-zinc-700/60 cursor-pointer transition-colors"
+                  >
+                    Cerrar
+                  </button>
                 </div>
-                <button
-                  onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }}
-                  className="text-xs text-zinc-400 hover:text-white px-3 py-2 rounded bg-zinc-850 border border-zinc-700/60 cursor-pointer transition-colors"
-                >
-                  Cerrar
-                </button>
               </div>
 
               {/* Modal Body / Results */}
