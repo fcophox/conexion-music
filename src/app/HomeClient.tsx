@@ -1571,38 +1571,38 @@ Que viaja directo a tu dirección.`;
         </div>
 
         {/* BOTTOM NAVIGATION BAR (all screen sizes, per wireframe) */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-12 lg:gap-16 items-center z-50">
+        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-4 lg:gap-8 items-center z-50">
           <button
             onClick={goHome}
-            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isHomeActive ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+            className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isHomeActive ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
           >
             <HomeIcon className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Inicio</span>
           </button>
           <button
             onClick={() => setIsSearchOpen(true)}
-            className="flex flex-col md:flex-row items-center gap-1 md:gap-3 text-zinc-400 hover:text-white cursor-pointer transition-colors bg-transparent border-0"
+            className="flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 text-zinc-400 hover:text-white cursor-pointer transition-colors bg-transparent border-0"
           >
             <Search className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Buscar</span>
           </button>
           <button
             onClick={openAbout}
-            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isAboutOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+            className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isAboutOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
           >
             <Info className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Sobre conexión</span>
           </button>
           <button
             onClick={() => router.push("?view=marketplace", { scroll: false })}
-            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isMarketplaceOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+            className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isMarketplaceOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
           >
             <Store className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Marketplace</span>
           </button>
           <button
             onClick={() => router.push("?view=universo", { scroll: false })}
-            className={`flex flex-col md:flex-row items-center gap-1 md:gap-3 cursor-pointer transition-colors ${isUniversoOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
+            className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isUniversoOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
           >
             <Globe className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Universo</span>
