@@ -1608,6 +1608,7 @@ Que viaja directo a tu dirección.`;
             <Info className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Sobre conexión</span>
           </button>
+          {/* Ocultado temporalmente
           <button
             onClick={() => router.push("?view=marketplace", { scroll: false })}
             className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isMarketplaceOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
@@ -1615,6 +1616,7 @@ Que viaja directo a tu dirección.`;
             <Store className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Marketplace</span>
           </button>
+          */}
           <button
             onClick={() => router.push("?view=universo", { scroll: false })}
             className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isUniversoOpen ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
