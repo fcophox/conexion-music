@@ -12,6 +12,7 @@ import {
   reorderAlbums,
   createAlbum,
   deleteAlbum,
+  deleteTrack,
   renameTrack,
   toggleAlbumStatus,
   toggleTrackStatus,
@@ -281,6 +282,43 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     }
 
     const result = await deleteAlbum(albumId);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "delete-track") {
+    let trackId: number | null = null;
+    try {
+      const body = await request.json();
+      trackId = typeof body?.trackId === "number" ? body.trackId : null;
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (trackId === null) {
+      return NextResponse.json({ error: "trackId is required" }, { status: 400 });
+    }
+
+    // 1. Delete processed audio files from disk
+    const root = process.cwd();
+    const hlsDir = path.join(root, "media", "hls", String(trackId));
+    const keyFile = path.join(root, "media", "keys", `${trackId}.key`);
+
+    try {
+      if (existsSync(hlsDir)) {
+        rmSync(hlsDir, { recursive: true, force: true });
+      }
+      if (existsSync(keyFile)) {
+        rmSync(keyFile, { force: true });
+      }
+    } catch (fsError) {
+      console.error("Error deleting track files from disk:", fsError);
+    }
+
+    // 2. Delete track metadata and stats in database
+    const result = await deleteTrack(trackId);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }

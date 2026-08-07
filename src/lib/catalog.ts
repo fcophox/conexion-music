@@ -126,6 +126,17 @@ export async function deleteAlbum(
   }
 }
 
+export async function deleteTrack(
+  trackId: number
+): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.catalog.deleteTrack, { trackId });
+  } catch (error) {
+    console.error("Convex deleteTrack mutation error:", error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 
 export async function toggleAlbumStatus(
   albumId: string,

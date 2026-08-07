@@ -1935,6 +1935,11 @@ function AlbumEditor({
             setDetailsTrack(null);
             onSaved();
           }}
+          onDeleted={(trackId) => {
+            setTracks((prev) => prev.filter((t) => t.id !== trackId));
+            setDetailsTrack(null);
+            onSaved();
+          }}
         />
       )}
 
@@ -2163,6 +2168,7 @@ function TrackDetailsDrawer({
   onClose,
   onUpdated,
   onMoved,
+  onDeleted,
 }: {
   track: TrackWithStats;
   albums: AlbumWithStats[];
@@ -2170,6 +2176,7 @@ function TrackDetailsDrawer({
   onClose: () => void;
   onUpdated: (trackId: number, patch: { bgImage?: string; lyrics?: string }) => void;
   onMoved: () => void;
+  onDeleted: (trackId: number) => void;
 }) {
   const [visible, setVisible] = useState(false);
   const [lyrics, setLyrics] = useState(track.lyrics ?? "");
@@ -2207,6 +2214,34 @@ function TrackDetailsDrawer({
       setMoveError("Error de red");
     } finally {
       setMoving(false);
+    }
+  };
+
+  // Eliminar canción (Zona de Peligro)
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDeleteTrack = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch("/api/management/delete-track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ trackId: track.id }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setDeleteError(data.error || "No se pudo eliminar la canción");
+        return;
+      }
+      onDeleted(track.id);
+    } catch {
+      setDeleteError("Error de red");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -2475,6 +2510,64 @@ function TrackDetailsDrawer({
                 {moveError}
               </div>
             )}
+          </div>
+
+          {/* Zona de Peligro */}
+          <div className="space-y-3 pt-5 border-t border-zinc-900">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-500" />
+              <span className="text-sm font-bold text-red-500">Zona de Peligro</span>
+            </div>
+            <div className="bg-red-950/10 border border-red-900/30 rounded-xl p-4 space-y-4">
+              <p className="text-xs text-zinc-400 leading-relaxed">
+                Eliminar permanentemente esta canción del disco. Esta acción es definitiva y eliminará los archivos de audio y las estadísticas.
+              </p>
+              {!confirmDelete ? (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-500/30 hover:border-red-500 bg-red-950/20 hover:bg-red-900/40 text-red-400 hover:text-white font-bold text-xs transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Eliminar canción
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs font-bold text-red-400">
+                    ¿Confirmas que deseas eliminar esta canción?
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDeleteTrack}
+                      disabled={deleting}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-600 hover:bg-red-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      {deleting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      Sí, eliminar
+                    </button>
+                    <button
+                      onClick={() => {
+                        setConfirmDelete(false);
+                        setDeleteError(null);
+                      }}
+                      disabled={deleting}
+                      className="flex-1 px-3 py-2 bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+              {deleteError && (
+                <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  {deleteError}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

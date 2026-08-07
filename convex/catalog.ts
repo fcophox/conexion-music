@@ -402,6 +402,34 @@ export const deleteAlbum = mutation({
   },
 });
 
+export const deleteTrack = mutation({
+  args: { trackId: v.number() },
+  handler: async (ctx, { trackId }) => {
+    const track = await ctx.db
+      .query("tracks")
+      .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
+      .unique();
+    if (!track) return { ok: false as const, error: "Canción no encontrada" };
+
+    // Borrar stats asociadas
+    const stat = await ctx.db
+      .query("trackStats")
+      .withIndex("by_trackId", (q) => q.eq("trackId", trackId))
+      .unique();
+    if (stat) await ctx.db.delete(stat._id);
+
+    // Borrar imagen en storage si la tiene
+    if (track.bgImageStorageId) {
+      await ctx.storage.delete(track.bgImageStorageId);
+    }
+
+    // Borrar la pista
+    await ctx.db.delete(track._id);
+
+    return { ok: true as const };
+  },
+});
+
 export const updateAlbumDetails = mutation({
   args: {
     albumId: v.string(),
