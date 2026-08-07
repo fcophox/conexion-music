@@ -1372,7 +1372,7 @@ Que viaja directo a tu dirección.`;
 
                   return (
                     <div className="px-4 md:px-0 pt-5 pb-2 relative z-10 text-center lg:text-left animate-fade-in">
-                      <p className="text-zinc-300 text-sm md:text-[15px] font-medium leading-relaxed italic drop-shadow-md select-text whitespace-pre-wrap">
+                      <p className="text-zinc-300 text-sm md:text-[15px] font-medium leading-relaxed drop-shadow-md select-text whitespace-pre-wrap">
                         {resolvedIntro}
                       </p>
                     </div>
