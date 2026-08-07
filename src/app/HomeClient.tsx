@@ -1362,6 +1362,22 @@ Que viaja directo a tu dirección.`;
                   </div>
                 </div>
 
+                {/* Album Intro (bajo del título, full ancho en el espacio) */}
+                {(() => {
+                  const resolvedIntro = selectedAlbum.aboutIntro && selectedAlbum.aboutIntro.trim()
+                    ? selectedAlbum.aboutIntro
+                    : (ALBUM_ABOUT_TEXTS[selectedAlbum.id]?.intro || ALBUM_ABOUT_TEXTS[slugify(selectedAlbum.title)]?.intro || (selectedAlbum.id === "blackout" || slugify(selectedAlbum.title) === "blackout" ? ALBUM_ABOUT_TEXTS["blackout"]?.intro : undefined));
+
+                  if (!resolvedIntro) return null;
+
+                  return (
+                    <div className="px-4 md:px-0 pt-5 pb-2 relative z-10 text-center lg:text-left animate-fade-in">
+                      <p className="text-zinc-300 text-sm md:text-[15px] font-medium leading-relaxed italic drop-shadow-md select-text whitespace-pre-wrap">
+                        {resolvedIntro}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 {/* Track List */}
                 <div className="pb-16 md:pb-24 px-4 md:px-0 relative z-10">
