@@ -791,7 +791,7 @@ export default function HomeClient({
                 <div className="flex-1 w-full space-y-4 md:space-y-6">
 
                   {/* Lyrics area with vertical scroll when extensive */}
-                  <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-3xl pt-2 pb-24 md:pb-28 max-h-[calc(100vh-220px)] lg:max-h-[calc(100vh-180px)] overflow-y-auto pr-4 custom-scrollbar">
+                  <div className="text-zinc-300 text-xs md:text-sm font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-3xl pt-2 pb-24 md:pb-28 max-h-[calc(100vh-220px)] lg:max-h-[calc(100vh-180px)] overflow-y-auto pr-4 custom-scrollbar">
                     {(() => {
                       // La letra guardada desde el panel de administración tiene
                       // prioridad; si no existe, se usan las letras por defecto.
