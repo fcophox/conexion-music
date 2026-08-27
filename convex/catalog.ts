@@ -25,6 +25,8 @@ export const getCatalog = query({
           description: a.description,
           aboutIntro: a.aboutIntro,
           aboutDetails: a.aboutDetails,
+          bgImage: a.bgImage,
+          bgImageStorageId: a.bgImageStorageId,
           creator: a.creator,
           tracksCount: a.tracksCount,
           durationText: a.durationText,
@@ -397,6 +399,9 @@ export const deleteAlbum = mutation({
       await ctx.db.delete(track._id);
     }
 
+    if (album.bgImageStorageId) {
+      await ctx.storage.delete(album.bgImageStorageId);
+    }
     await ctx.db.delete(album._id);
     return { ok: true as const };
   },
@@ -438,8 +443,10 @@ export const updateAlbumDetails = mutation({
     year: v.optional(v.number()),
     aboutIntro: v.optional(v.string()),
     aboutDetails: v.optional(v.string()),
+    bgImageStorageId: v.optional(v.id("_storage")),
+    removeBgImage: v.optional(v.boolean()),
   },
-  handler: async (ctx, { albumId, title, coverStorageId, year, aboutIntro, aboutDetails }) => {
+  handler: async (ctx, { albumId, title, coverStorageId, year, aboutIntro, aboutDetails, bgImageStorageId, removeBgImage }) => {
     let album = await ctx.db
       .query("albums")
       .withIndex("by_albumId", (q) => q.eq("albumId", albumId))
@@ -457,6 +464,8 @@ export const updateAlbumDetails = mutation({
       aboutIntro?: string;
       aboutDetails?: string;
       description?: string;
+      bgImage?: string | undefined;
+      bgImageStorageId?: Id<"_storage"> | undefined;
     } = {};
 
     if (title !== undefined) {
@@ -504,6 +513,18 @@ export const updateAlbumDetails = mutation({
       patch.description = aboutDetails;
     }
 
+    if (removeBgImage) {
+      if (album.bgImageStorageId) await ctx.storage.delete(album.bgImageStorageId);
+      patch.bgImage = undefined;
+      patch.bgImageStorageId = undefined;
+    } else if (bgImageStorageId) {
+      const url = await ctx.storage.getUrl(bgImageStorageId);
+      if (!url) return { ok: false as const, error: "Imagen no encontrada en storage" };
+      if (album.bgImageStorageId) await ctx.storage.delete(album.bgImageStorageId);
+      patch.bgImage = url;
+      patch.bgImageStorageId = bgImageStorageId;
+    }
+
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(album._id, patch);
     }
@@ -515,6 +536,7 @@ export const updateAlbumDetails = mutation({
       year: patch.year,
       aboutIntro: patch.aboutIntro,
       aboutDetails: patch.aboutDetails,
+      bgImage: removeBgImage ? undefined : patch.bgImage ?? album.bgImage,
     };
   },
 });

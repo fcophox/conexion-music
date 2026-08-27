@@ -2,7 +2,7 @@ import "server-only";
 import { convex } from "./convex";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import type { Album, AlbumWithStats } from "./catalog-types";
+import type { Album, AlbumWithStats, CarouselSlide } from "./catalog-types";
 import { SEED_ALBUMS } from "./seed";
 
 // Siembra la base de Convex si está vacía (la mutación no hace nada si ya hay datos).
@@ -156,7 +156,9 @@ export async function updateAlbumDetails(args: {
   year?: number;
   aboutIntro?: string;
   aboutDetails?: string;
-}): Promise<{ ok: boolean; title?: string; coverImage?: string; year?: number; aboutIntro?: string; aboutDetails?: string; error?: string }> {
+  bgImageStorageId?: Id<"_storage">;
+  removeBgImage?: boolean;
+}): Promise<{ ok: boolean; title?: string; coverImage?: string; year?: number; aboutIntro?: string; aboutDetails?: string; bgImage?: string; error?: string }> {
   try {
     const mutationArgs: any = { albumId: args.albumId };
     if (args.title !== undefined) mutationArgs.title = args.title;
@@ -164,6 +166,8 @@ export async function updateAlbumDetails(args: {
     if (args.year !== undefined) mutationArgs.year = args.year;
     if (args.aboutIntro !== undefined) mutationArgs.aboutIntro = args.aboutIntro;
     if (args.aboutDetails !== undefined) mutationArgs.aboutDetails = args.aboutDetails;
+    if (args.bgImageStorageId !== undefined) mutationArgs.bgImageStorageId = args.bgImageStorageId;
+    if (args.removeBgImage !== undefined) mutationArgs.removeBgImage = args.removeBgImage;
 
     return await convex.mutation(api.catalog.updateAlbumDetails, mutationArgs);
   } catch (error) {
@@ -296,6 +300,40 @@ export async function createMarketplaceProduct(product: {
 export async function deleteMarketplaceProduct(id: string): Promise<{ ok: boolean; error?: string }> {
   try {
     return await convex.mutation(api.catalog.deleteMarketplaceProduct, { id });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function getCarouselSlides(): Promise<CarouselSlide[]> {
+  try {
+    return (await convex.query(api.carousel.getSlides, {})) as CarouselSlide[];
+  } catch (error) {
+    console.error("Error fetching carousel slides from Convex:", error);
+    return [];
+  }
+}
+
+export async function addCarouselSlide(storageId: string): Promise<{ ok: boolean; id?: string; url?: string; error?: string }> {
+  try {
+    const res = await convex.mutation(api.carousel.addSlide, { storageId: storageId as any });
+    return { ok: true, ...res };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function deleteCarouselSlide(id: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.carousel.deleteSlide, { id: id as any });
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export async function reorderCarouselSlides(orderedIds: string[]): Promise<{ ok: boolean; error?: string }> {
+  try {
+    return await convex.mutation(api.carousel.reorderSlides, { orderedIds: orderedIds as any });
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

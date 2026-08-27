@@ -22,6 +22,10 @@ import {
   getMarketplaceProducts,
   createMarketplaceProduct,
   deleteMarketplaceProduct,
+  getCarouselSlides,
+  addCarouselSlide,
+  deleteCarouselSlide,
+  reorderCarouselSlides,
 } from "@/lib/catalog";
 
 import { execFileSync } from "node:child_process";
@@ -81,6 +85,11 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       { products },
       { headers: { "Cache-Control": "no-store" } }
     );
+  }
+
+  if (endpoint === "carousel-slides") {
+    const slides = await getCarouselSlides();
+    return NextResponse.json({ slides });
   }
 
   return NextResponse.json({ error: "not found" }, { status: 404 });
@@ -383,6 +392,46 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ ok: true });
   }
 
+  if (endpoint === "carousel-slide") {
+    let storageId = "";
+    try {
+      const body = await request.json();
+      storageId = typeof body?.storageId === "string" ? body.storageId.trim() : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!storageId) {
+      return NextResponse.json({ error: "El storageId es requerido" }, { status: 400 });
+    }
+
+    const result = await addCarouselSlide(storageId);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true, id: result.id, url: result.url });
+  }
+
+  if (endpoint === "delete-carousel-slide") {
+    let id = "";
+    try {
+      const body = await request.json();
+      id = typeof body?.id === "string" ? body.id.trim() : "";
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "El id es requerido" }, { status: 400 });
+    }
+
+    const result = await deleteCarouselSlide(id);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
   return NextResponse.json({ error: "not found" }, { status: 404 });
 }
 
@@ -476,6 +525,8 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
     let year: number | undefined;
     let aboutIntro: string | undefined;
     let aboutDetails: string | undefined;
+    let bgImageStorageId: string | undefined;
+    let removeBgImage: boolean | undefined;
     try {
       const body = await request.json();
       albumId = typeof body?.albumId === "string" ? body.albumId : "";
@@ -484,6 +535,8 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
       year = typeof body?.year === "number" ? body.year : undefined;
       aboutIntro = typeof body?.aboutIntro === "string" ? body.aboutIntro : undefined;
       aboutDetails = typeof body?.aboutDetails === "string" ? body.aboutDetails : undefined;
+      bgImageStorageId = typeof body?.bgImageStorageId === "string" && body.bgImageStorageId ? body.bgImageStorageId : undefined;
+      removeBgImage = typeof body?.removeBgImage === "boolean" ? body.removeBgImage : undefined;
     } catch {
       return NextResponse.json({ error: "bad request" }, { status: 400 });
     }
@@ -492,9 +545,18 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ error: "albumId es requerido" }, { status: 400 });
     }
 
-    console.log("[album-details] Request:", { albumId, title, coverStorageId, year, aboutIntro, aboutDetails });
+    console.log("[album-details] Request:", { albumId, title, coverStorageId, year, aboutIntro, aboutDetails, bgImageStorageId, removeBgImage });
 
-    const result = await updateAlbumDetails({ albumId, title, coverStorageId, year, aboutIntro, aboutDetails });
+    const result = await updateAlbumDetails({
+      albumId,
+      title,
+      coverStorageId,
+      year,
+      aboutIntro,
+      aboutDetails,
+      bgImageStorageId: bgImageStorageId as any,
+      removeBgImage,
+    });
     console.log("[album-details] Result:", JSON.stringify(result));
     if (!result.ok) {
       console.error("[album-details route error]", result.error);
@@ -507,6 +569,7 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
       year: result.year,
       aboutIntro: result.aboutIntro,
       aboutDetails: result.aboutDetails,
+      bgImage: result.bgImage,
     });
   }
 
@@ -570,6 +633,26 @@ export async function PUT(request: NextRequest, ctx: RouteContext) {
     }
 
     const result = await toggleTrackStatus(trackId, disabled);
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+    return NextResponse.json({ ok: true });
+  }
+
+  if (endpoint === "reorder-slides") {
+    let orderedIds: string[] = [];
+    try {
+      const body = await request.json();
+      orderedIds = Array.isArray(body?.orderedIds) ? body.orderedIds.map(String) : [];
+    } catch {
+      return NextResponse.json({ error: "bad request" }, { status: 400 });
+    }
+
+    if (orderedIds.length === 0) {
+      return NextResponse.json({ error: "orderedIds es requerido" }, { status: 400 });
+    }
+
+    const result = await reorderCarouselSlides(orderedIds);
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }

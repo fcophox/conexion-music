@@ -33,6 +33,8 @@ export interface Album {
   disabled?: boolean;
   aboutIntro?: string;
   aboutDetails?: string;
+  bgImage?: string;
+  bgImageStorageId?: string;
   tracks: Track[];
 }
 
@@ -44,4 +46,10 @@ export interface TrackWithStats extends Track {
 
 export interface AlbumWithStats extends Omit<Album, "tracks"> {
   tracks: TrackWithStats[];
+}
+
+export interface CarouselSlide {
+  id: string;
+  storageId: string;
+  url: string;
 }

@@ -20,6 +20,8 @@ export default defineSchema({
     disabled: v.boolean(),
     aboutIntro: v.optional(v.string()),
     aboutDetails: v.optional(v.string()),
+    bgImage: v.optional(v.string()),
+    bgImageStorageId: v.optional(v.id("_storage")),
     // Preserva el orden de creación que en Supabase daba `created_at`.
     sortOrder: v.number(),
   }).index("by_albumId", ["albumId"]),
@@ -65,6 +67,12 @@ export default defineSchema({
     description: v.optional(v.string()),
     image: v.optional(v.string()),
     imageStorageId: v.optional(v.id("_storage")),
+    sortOrder: v.number(),
+  }),
+
+  carouselSlides: defineTable({
+    storageId: v.id("_storage"),
+    url: v.string(),
     sortOrder: v.number(),
   }),
 });

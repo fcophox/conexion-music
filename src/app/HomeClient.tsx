@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSecureAudio } from "@/hooks/useSecureAudio";
-import type { Album, Track, AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
+import type { Album, Track, AlbumWithStats, TrackWithStats, CarouselSlide } from "@/lib/catalog-types";
 import {
   Home as HomeIcon,
   Search,
@@ -168,10 +168,12 @@ function HandIcon({ className }: { className?: string }) {
   );
 }
 
-function BackgroundCrossfade({ currentBg }: { currentBg: string }) {
+function BackgroundCrossfade({ currentBg, albums = [], slides = BACKGROUNDS }: { currentBg: string; albums?: any[]; slides?: string[] }) {
+  const dbBgs = albums.map((a) => a.bgImage).filter(Boolean) as string[];
+  const list = Array.from(new Set([...slides, ...dbBgs, currentBg].filter(Boolean)));
   return (
     <>
-      {BACKGROUNDS.map((bg) => (
+      {list.map((bg) => (
         <img
           key={bg}
           src={bg}
@@ -187,10 +189,16 @@ function BackgroundCrossfade({ currentBg }: { currentBg: string }) {
 export default function HomeClient({
   albums,
   initialProducts,
+  carouselSlides = [],
 }: {
   albums: AlbumWithStats[];
   initialProducts?: any[];
+  carouselSlides?: CarouselSlide[];
 }) {
+  const slides = carouselSlides.length > 0
+    ? carouselSlides.map((s) => s.url)
+    : SLIDES;
+
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isLoaded, setIsLoaded] = useState(false);
@@ -252,11 +260,11 @@ export default function HomeClient({
   useEffect(() => {
     if (!isCarouselActive) return;
     const id = setInterval(
-      () => setSlideIndex((i) => (i + 1) % SLIDES.length),
+      () => setSlideIndex((i) => (i + 1) % slides.length),
       SLIDE_INTERVAL_MS
     );
     return () => clearInterval(id);
-  }, [isCarouselActive]);
+  }, [isCarouselActive, slides.length]);
 
   const currentBg = (() => {
     const targetId = hoveredAlbumId || (selectedAlbum ? selectedAlbum.id : null);
@@ -266,6 +274,9 @@ export default function HomeClient({
       if (album?.disabled) {
         return '/cd/bg-conexion-cover.png';
       }
+      if (album?.bgImage) {
+        return album.bgImage;
+      }
     }
 
     switch (targetId) {
@@ -273,7 +284,7 @@ export default function HomeClient({
       case 'doble-cero': return '/cd/bg-conexion-doblecero.png';
       case 'geminis': return '/cd/bg-conexion-geminis.png';
       case 'vertical': return '/cd/bg-conexion-vertical.png';
-      default: return SLIDES[slideIndex];
+      default: return slides[slideIndex % slides.length];
     }
   })();
 
@@ -716,7 +727,7 @@ export default function HomeClient({
                     className="absolute inset-0 w-full h-full object-cover object-[right_top] opacity-100"
                   />
                 ) : (
-                  <BackgroundCrossfade currentBg={currentBg} />
+                  <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
                 )}
                 {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
                 <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
@@ -913,7 +924,7 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 w-full animate-fade-in flex flex-col items-center">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} />
+                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
                 {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
                 <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
                 <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
@@ -989,7 +1000,7 @@ Que viaja directo a tu dirección.`;
                                   </button>
                                   {isExpanded && (
                                     <div className="pt-2 text-zinc-400 text-sm leading-relaxed space-y-3 border-t border-zinc-900/80 animate-fade-in">
-                                      <p>{details}</p>
+                                      <p className="whitespace-pre-line">{details}</p>
                                     </div>
                                   )}
                                 </>
@@ -1154,7 +1165,7 @@ Que viaja directo a tu dirección.`;
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10">
-                <BackgroundCrossfade currentBg={currentBg} />
+                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
                 {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
                 <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
                 <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
@@ -1271,7 +1282,7 @@ Que viaja directo a tu dirección.`;
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} />
+                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
                 {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
                 <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
                 <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />

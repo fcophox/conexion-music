@@ -28,8 +28,9 @@ import {
   Plus,
   Settings,
   Store,
+  Image,
 } from "lucide-react";
-import type { AlbumWithStats, TrackWithStats } from "@/lib/catalog-types";
+import type { AlbumWithStats, TrackWithStats, CarouselSlide } from "@/lib/catalog-types";
 
 function formatTime(seconds: number) {
   const mins = Math.floor(seconds / 60);
@@ -189,10 +190,12 @@ function Dashboard({
   const dragItemIndex = useRef<number | null>(null);
   const [creatingAlbum, setCreatingAlbum] = useState(false);
 
-  // Pestañas (Catálogo vs Marketplace)
-  const [activeTab, setActiveTab] = useState<"catalog" | "marketplace">("catalog");
+  // Pestañas (Catálogo vs Marketplace vs Carousel)
+  const [activeTab, setActiveTab] = useState<"catalog" | "marketplace" | "carousel">("catalog");
   const [marketplaceProducts, setMarketplaceProducts] = useState<any[]>([]);
   const [loadingMarketplace, setLoadingMarketplace] = useState(false);
+  const [carouselSlides, setCarouselSlides] = useState<CarouselSlide[]>([]);
+  const [loadingCarousel, setLoadingCarousel] = useState(false);
 
   const loadMarketplace = useCallback(async () => {
     setLoadingMarketplace(true);
@@ -209,11 +212,28 @@ function Dashboard({
     }
   }, []);
 
+  const loadCarousel = useCallback(async () => {
+    setLoadingCarousel(true);
+    try {
+      const res = await fetch("/api/management/carousel-slides", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setCarouselSlides(data.slides || []);
+      }
+    } catch (err) {
+      console.error("Error al cargar fondos del carrusel:", err);
+    } finally {
+      setLoadingCarousel(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (activeTab === "marketplace") {
       loadMarketplace();
+    } else if (activeTab === "carousel") {
+      loadCarousel();
     }
-  }, [activeTab, loadMarketplace]);
+  }, [activeTab, loadMarketplace, loadCarousel]);
 
   useEffect(() => {
     setLocalAlbums(albums);
@@ -439,6 +459,15 @@ function Dashboard({
               <Store className="w-4 h-4 text-[#FFC400]" />
               Marketplace
             </button>
+            <button
+              onClick={() => setActiveTab("carousel")}
+              className={`flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-sm font-semibold transition-colors cursor-pointer ${
+                activeTab === "carousel" ? "bg-zinc-900 text-white" : "text-zinc-400 hover:bg-zinc-900/40 hover:text-white"
+              }`}
+            >
+              <Image className="w-4 h-4 text-emerald-400" />
+              Fondos de Carrusel
+            </button>
           </div>
 
           {activeTab === "catalog" ? (
@@ -635,10 +664,16 @@ function Dashboard({
                 />
               )}
             </>
-          ) : (
+          ) : activeTab === "marketplace" ? (
             <MarketplaceEditor
               products={marketplaceProducts}
               onReload={loadMarketplace}
+              showToast={showToast}
+            />
+          ) : (
+            <CarouselEditor
+              slides={carouselSlides}
+              onReload={loadCarousel}
               showToast={showToast}
             />
           )}
@@ -1380,6 +1415,8 @@ function AlbumEditor({
   // Album cover upload & rename state
   const albumCoverInputRef = useRef<HTMLInputElement>(null);
   const [uploadingAlbumCover, setUploadingAlbumCover] = useState(false);
+  const albumBgImageInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingAlbumBgImage, setUploadingAlbumBgImage] = useState(false);
   const [editingAlbumTitle, setEditingAlbumTitle] = useState(false);
   const [albumTitleInput, setAlbumTitleInput] = useState(album.title);
   const [savingAlbumTitle, setSavingAlbumTitle] = useState(false);
@@ -1465,6 +1502,56 @@ function AlbumEditor({
       console.error("Error uploading album cover:", err);
     } finally {
       setUploadingAlbumCover(false);
+    }
+  };
+
+  const handleAlbumBgImageChange = async (file: File) => {
+    if (!file || uploadingAlbumBgImage) return;
+    setUploadingAlbumBgImage(true);
+    try {
+      const urlRes = await fetch("/api/management/image-upload-url", { method: "POST" });
+      if (!urlRes.ok) return;
+      const { uploadUrl } = await urlRes.json();
+
+      const upRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!upRes.ok) return;
+      const { storageId } = await upRes.json();
+
+      const res = await fetch("/api/management/album-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: album.id, bgImageStorageId: storageId }),
+      });
+      if (res.ok) {
+        onSaved();
+      }
+    } catch (err) {
+      console.error("Error uploading album background image:", err);
+    } finally {
+      setUploadingAlbumBgImage(false);
+    }
+  };
+
+  const handleRemoveAlbumBgImage = async () => {
+    if (uploadingAlbumBgImage) return;
+    setUploadingAlbumBgImage(true);
+    try {
+      const res = await fetch("/api/management/album-details", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ albumId: album.id, removeBgImage: true }),
+      });
+      if (res.ok) {
+        onSaved();
+      }
+    } catch (err) {
+      console.error("Error removing album background image:", err);
+    } finally {
+      setUploadingAlbumBgImage(false);
     }
   };
 
@@ -1628,6 +1715,14 @@ function AlbumEditor({
           </div>
         </div>
 
+        <button
+          onClick={() => setAboutDrawerOpen(true)}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white hover:scale-[1.02] shrink-0"
+          title="Configurar disco"
+        >
+          <Settings className="w-4 h-4" />
+          Configurar disco
+        </button>
       </div>
 
       {/* Barra de acciones */}
@@ -1650,14 +1745,6 @@ function AlbumEditor({
               }
             }}
           />
-          <button
-            onClick={() => setAboutDrawerOpen(true)}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer bg-zinc-800 text-zinc-300 hover:bg-zinc-700 hover:text-white hover:scale-[1.02]"
-            title="Configurar disco"
-          >
-            <Settings className="w-4 h-4" />
-            Configurar disco
-          </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
@@ -2078,6 +2165,60 @@ function AlbumEditor({
 
                   <hr className="border-zinc-900" />
 
+                  {/* Imagen de Fondo */}
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-white mb-1">Imagen de Fondo del Disco</h4>
+                      <p className="text-xs text-zinc-500">Sube una imagen de fondo para este álbum.</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <input
+                        ref={albumBgImageInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            handleAlbumBgImageChange(e.target.files[0]);
+                            e.target.value = "";
+                          }
+                        }}
+                      />
+                      {album.bgImage ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={album.bgImage} alt="" className="w-20 h-20 rounded-lg object-cover bg-zinc-900 shadow-md animate-fade-in" />
+                      ) : (
+                        <div className="w-20 h-20 rounded-lg bg-zinc-900 flex items-center justify-center border border-zinc-800">
+                          <Image className="w-8 h-8 text-zinc-700" />
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => albumBgImageInputRef.current?.click()}
+                          disabled={uploadingAlbumBgImage}
+                          className="px-4 py-2 bg-zinc-900 border border-zinc-800 hover:border-emerald-500/50 text-zinc-300 hover:text-white rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-2"
+                        >
+                          {uploadingAlbumBgImage ? <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> : <Upload className="w-4 h-4" />}
+                          {uploadingAlbumBgImage ? "Subiendo..." : "Subir fondo"}
+                        </button>
+                        {album.bgImage && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveAlbumBgImage}
+                            disabled={uploadingAlbumBgImage}
+                            className="px-3 py-2 bg-zinc-900/50 border border-zinc-800/80 hover:border-red-500/30 text-zinc-400 hover:text-red-400 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Quitar
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <hr className="border-zinc-900" />
+
                   {/* Textos de About */}
                   <div className="space-y-4">
                     <div>
@@ -2145,7 +2286,7 @@ function AlbumEditor({
                     className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-full transition-all cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50"
                   >
                     {savingAbout ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                    <span>Guardar Textos</span>
+                    <span>Guardar</span>
                   </button>
                 </div>
 
@@ -2592,6 +2733,202 @@ function TrackDetailsDrawer({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ========================================================================= */
+/* EDITOR DE CARRUSEL DE FONDOS                                              */
+/* ========================================================================= */
+interface CarouselEditorProps {
+  slides: CarouselSlide[];
+  onReload: () => void;
+  showToast: (msg: string) => void;
+}
+
+function CarouselEditor({ slides, onReload, showToast }: CarouselEditorProps) {
+  const [uploading, setUploading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const urlRes = await fetch("/api/management/image-upload-url", { method: "POST" });
+      if (!urlRes.ok) throw new Error("No se pudo iniciar la subida");
+      const { uploadUrl } = await urlRes.json();
+
+      const upRes = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!upRes.ok) throw new Error("Error al subir archivo a storage");
+      const { storageId } = await upRes.json();
+
+      const res = await fetch("/api/management/carousel-slide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storageId }),
+      });
+      if (!res.ok) throw new Error("Error al registrar la diapositiva");
+      
+      showToast("Diapositiva subida correctamente");
+      onReload();
+    } catch (err) {
+      console.error(err);
+      showToast(err instanceof Error ? err.message : "Error al subir diapositiva");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      const res = await fetch("/api/management/delete-carousel-slide", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) {
+        showToast("Diapositiva eliminada");
+        onReload();
+      } else {
+        showToast("Error al eliminar");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error de red");
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleMove = async (index: number, direction: "up" | "down") => {
+    const newSlides = [...slides];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= slides.length) return;
+
+    // Intercambiar
+    const temp = newSlides[index];
+    newSlides[index] = newSlides[targetIndex];
+    newSlides[targetIndex] = temp;
+
+    try {
+      const res = await fetch("/api/management/reorder-slides", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderedIds: newSlides.map((s) => s.id) }),
+      });
+      if (res.ok) {
+        onReload();
+      } else {
+        showToast("Error al reordenar");
+      }
+    } catch (err) {
+      console.error(err);
+      showToast("Error de red");
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-black text-white">Fondos de Carrusel</h1>
+          <p className="text-zinc-400 text-sm mt-1">
+            Sube imágenes de fondo por defecto que rotan en el carrusel de la página de inicio.
+          </p>
+        </div>
+
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleUpload}
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs rounded-full transition-all cursor-pointer shadow-lg shadow-emerald-500/25 disabled:opacity-50"
+          >
+            {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+            <span>Subir imagen de fondo</span>
+          </button>
+        </div>
+      </div>
+
+      {slides.length === 0 ? (
+        <div className="bg-zinc-900/35 border border-zinc-800/80 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-3">
+          <Image className="w-12 h-12 text-zinc-600 mx-auto" />
+          <h3 className="text-white font-bold text-base">Sin fondos personalizados</h3>
+          <p className="text-zinc-500 text-xs leading-relaxed">
+            Actualmente no hay fondos personalizados en el carrusel. El sitio web cargará las imágenes de fondo originales por defecto (`bg-conexion-slider-1.png`, etc.).
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+          {slides.map((slide, index) => (
+            <div
+              key={slide.id}
+              className="bg-zinc-900/35 border border-zinc-800/60 rounded-2xl overflow-hidden flex flex-col hover:border-zinc-700/60 transition-all group shadow-lg"
+            >
+              {/* Preview */}
+              <div className="w-full aspect-[16/9] bg-zinc-950 overflow-hidden relative flex items-center justify-center border-b border-zinc-900">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={slide.url}
+                  alt=""
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                
+                {/* Overlay Loader */}
+                {deletingId === slide.id && (
+                  <div className="absolute inset-0 bg-black/75 flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-red-400" />
+                  </div>
+                )}
+              </div>
+
+              {/* Controles */}
+              <div className="p-4 flex items-center justify-between bg-zinc-900/20">
+                <div className="flex items-center gap-1.5">
+                  <button
+                    disabled={index === 0}
+                    onClick={() => handleMove(index, "up")}
+                    className="p-1.5 bg-zinc-900 border border-zinc-800/80 hover:border-zinc-700/80 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Mover arriba"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    disabled={index === slides.length - 1}
+                    onClick={() => handleMove(index, "down")}
+                    className="p-1.5 bg-zinc-900 border border-zinc-800/80 hover:border-zinc-700/80 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Mover abajo"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => handleDelete(slide.id)}
+                  disabled={deletingId !== null}
+                  className="p-1.5 bg-zinc-900/50 border border-zinc-800/80 hover:border-red-500/30 text-zinc-500 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+                  title="Eliminar de carrusel"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

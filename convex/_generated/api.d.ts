@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as carousel from "../carousel.js";
 import type * as catalog from "../catalog.js";
 import type * as migrate from "../migrate.js";
 import type * as seed from "../seed.js";
@@ -21,6 +22,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  carousel: typeof carousel;
   catalog: typeof catalog;
   migrate: typeof migrate;
   seed: typeof seed;
