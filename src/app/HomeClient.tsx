@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useSecureAudio } from "@/hooks/useSecureAudio";
+import AppleCoverFlow from "./AppleCoverFlow";
 import type { Album, Track, AlbumWithStats, TrackWithStats, CarouselSlide } from "@/lib/catalog-types";
 import {
   Home as HomeIcon,
@@ -201,6 +203,7 @@ export default function HomeClient({
 
   const router = useRouter();
   const searchParams = useSearchParams();
+  const reduceMotion = useReducedMotion();
   const [isLoaded, setIsLoaded] = useState(false);
   const [showLoader, setShowLoader] = useState(true);
 
@@ -597,30 +600,6 @@ export default function HomeClient({
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
-  };
-
-  // Carrusel de discos: arrastre con el mouse (el táctil usa scroll nativo).
-  // `moved` evita que el click abra un disco justo al terminar de arrastrar.
-  const discosRef = useRef<HTMLDivElement>(null);
-  const drag = useRef({ isDown: false, startX: 0, scrollLeft: 0, moved: false });
-
-  const handleDiscosDown = (e: React.MouseEvent) => {
-    const el = discosRef.current;
-    if (!el) return;
-    drag.current = { isDown: true, startX: e.pageX, scrollLeft: el.scrollLeft, moved: false };
-  };
-
-  const handleDiscosMove = (e: React.MouseEvent) => {
-    const el = discosRef.current;
-    if (!el || !drag.current.isDown) return;
-    e.preventDefault();
-    const dx = e.pageX - drag.current.startX;
-    if (Math.abs(dx) > 5) drag.current.moved = true;
-    el.scrollLeft = drag.current.scrollLeft - dx;
-  };
-
-  const handleDiscosUp = () => {
-    drag.current.isDown = false;
   };
 
   // Helper to draw geometric/gradient album art using CSS or load image
@@ -1179,12 +1158,12 @@ Que viaja directo a tu dirección.`;
                   <div className="max-w-xl flex flex-col items-start text-left space-y-4 md:space-y-[clamp(0.75rem,2vh,1.25rem)] animate-fade-in">
 
                     {/* Greeting + Logo */}
-                    <div className="space-y-1">
-                      <p className="text-zinc-400 text-sm md:text-base font-semibold tracking-wide drop-shadow-md">{greeting}</p>
+                    <div className="w-full max-w-md space-y-1">
+                      <p className="text-xs font-semibold tracking-wide text-zinc-400 drop-shadow-md md:text-sm">{greeting}</p>
                       <img
                         src="/brand/conexionlogo.svg"
                         alt="Conexión"
-                        className="h-9 md:h-11 lg:h-12 w-auto drop-shadow-2xl"
+                        className="h-8 w-auto drop-shadow-2xl md:h-9 lg:h-10"
                       />
                     </div>
 
@@ -1218,59 +1197,22 @@ Que viaja directo a tu dirección.`;
                 </div>
               </div>
 
-              {/* DISCOS ROW (horizontal scroll, Netflix-style) */}
-              <div className="relative max-w-[1400px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 space-y-4">
-
-                <div
-                  ref={discosRef}
-                  onMouseDown={handleDiscosDown}
-                  onMouseMove={handleDiscosMove}
-                  onMouseUp={handleDiscosUp}
-                  onMouseLeave={handleDiscosUp}
-                  className="flex gap-4 overflow-x-auto pt-4 pb-4 -mx-4 px-4 md:-mx-4 md:px-4 no-scrollbar cursor-grab active:cursor-grabbing select-none"
-                >
-                  {albums.map((album, index) => (
-                    <div
-                      key={album.id}
-                      onMouseEnter={() => setHoveredAlbumId(album.id)}
-                      onMouseLeave={() => setHoveredAlbumId(null)}
-                      onClick={() => {
-                        if (drag.current.moved) return;
-                        if (!album.disabled) updateUrl(album.id, null);
-                      }}
-                      className={`w-[46%] sm:w-[38%] md:w-[28%] lg:w-[22%] xl:w-[18%] shrink-0 rounded-2xl transition-all duration-300 ${album.disabled
-                        ? "cursor-not-allowed"
-                        : "group cursor-pointer hover:-translate-y-1"
-                        }`}
-                    >
-                      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-zinc-800 relative mb-3 flex items-center justify-center shadow-lg shadow-black/40">
-                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
-
-                        {album.disabled ? (
-                          /* Pronto Overlay Badge */
-                          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                            <span className="bg-[#FFC107]/90 text-black text-xs font-black tracking-widest uppercase px-3 py-1 rounded shadow shadow-[#FFC107]/25">Pronto</span>
-                          </div>
-                        ) : (
-                          /* Floating Play Icon */
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (drag.current.moved) return;
-                              playEntireAlbum(album);
-                            }}
-                            className="absolute bottom-3 right-3 w-12 h-12 rounded-full bg-emerald-500 text-black flex items-center justify-center shadow-lg shadow-emerald-500/20 opacity-0 scale-75 translate-y-2 group-hover:opacity-100 group-hover:scale-100 group-hover:translate-y-0 transition-all duration-300 hover:bg-emerald-400 cursor-pointer"
-                          >
-                            <Play className="w-5 h-5 text-black" />
-                          </button>
-                        )}
-                      </div>
-
-                      <h3 className={`font-bold text-sm truncate ${album.disabled ? 'text-zinc-500' : 'text-white'}`}>{album.disabled ? `Disco ${index + 1}` : album.title}</h3>
-                      <p className="text-zinc-500 text-xs mt-1 truncate">Por {album.artist} • {album.year}</p>
-                    </div>
-                  ))}
-                </div>
+              {/* DISCOS — Cover Flow 3D */}
+              <div className="relative max-w-[1400px] mx-auto w-full px-0 md:px-8 lg:px-12">
+                <AppleCoverFlow
+                  items={albums.map((album, index) => ({
+                    id: album.id,
+                    title: album.disabled ? `Disco ${index + 1}` : album.title,
+                    image: album.disabled
+                      ? "/cd/cover_cover_conexion.png"
+                      : (album.coverImage ?? "/cd/cover_cover_conexion.png").replace("/brand/", "/cd/"),
+                    link: `?album=${encodeURIComponent(album.id)}`,
+                    subtitle: `Por ${album.artist} • ${album.year}`,
+                    disabled: album.disabled,
+                  }))}
+                  onActiveChange={(item) => setHoveredAlbumId(item?.id ?? null)}
+                  onOpen={(item) => router.push(item.link, { scroll: false })}
+                />
               </div>
 
             </div>
@@ -1469,18 +1411,39 @@ Que viaja directo a tu dirección.`;
 
         </main>
 
-        {/* GLOBAL PLAYER BAR (floating glassmorphism pill, max 720px width, separated from bottom nav) */}
-        <div className="fixed bottom-[88px] md:bottom-[112px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5">
+        {/* GLOBAL PLAYER BAR: solo aparece cuando hay una canción seleccionada. */}
+        <AnimatePresence mode="wait">
+          {currentTrack && (
+            <motion.div
+              key="global-player"
+              role="region"
+              aria-label={`Reproduciendo ${currentTrack.title}`}
+              initial={{
+                opacity: 0,
+                transform: reduceMotion
+                  ? "translateX(-50%)"
+                  : "translate(-50%, -125%)",
+              }}
+              animate={{ opacity: 1, transform: "translate(-50%, 0%)" }}
+              exit={{
+                opacity: 0,
+                transform: reduceMotion
+                  ? "translateX(-50%)"
+                  : "translate(-50%, -125%)",
+              }}
+              transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+              className="fixed bottom-[88px] md:bottom-[112px] left-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5 will-change-transform"
+            >
           <div className="flex items-center justify-between h-12 md:h-14 gap-3 md:gap-4 w-full">
 
             {/* Track info */}
             <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 md:flex-none md:w-[200px] lg:w-[220px] shrink-0">
               <div className="w-10 h-10 md:w-11 md:h-11 rounded-lg overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                {currentTrack ? renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage) : renderCoverArt("", "", "w-full h-full", "/cd/cover_cover_conexion.png")}
+                {renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage)}
               </div>
               <div className="truncate min-w-0 pr-1">
-                <span className="block font-bold text-xs md:text-sm truncate text-white">{currentTrack ? currentTrack.title : "--"}</span>
-                <span className="block text-zinc-400 text-[10px] md:text-xs truncate">{currentTrack ? currentTrack.artist : "--"}</span>
+                <span className="block font-bold text-xs md:text-sm truncate text-white">{currentTrack.title}</span>
+                <span className="block text-zinc-400 text-[10px] md:text-xs truncate">{currentTrack.artist}</span>
               </div>
             </div>
 
@@ -1594,7 +1557,9 @@ Que viaja directo a tu dirección.`;
               style={{ width: `${displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0}%` }}
             />
           </div>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* BOTTOM NAVIGATION BAR (all screen sizes, per wireframe) */}
         <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-4 lg:gap-8 items-center z-50">
