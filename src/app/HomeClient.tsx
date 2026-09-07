@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useSecureAudio } from "@/hooks/useSecureAudio";
 import AppleCoverFlow from "./AppleCoverFlow";
+import AltHomeView from "./AltHomeView";
+import LibrarySidebar from "./LibrarySidebar";
 import type { Album, Track, AlbumWithStats, TrackWithStats, CarouselSlide } from "@/lib/catalog-types";
 import {
   Home as HomeIcon,
-  Search,
   Play,
   Pause,
   SkipBack,
@@ -19,6 +20,7 @@ import {
   Heart,
   Shuffle,
   ChevronRight,
+  MoreVertical,
   Music,
   Disc3,
   Info,
@@ -29,6 +31,9 @@ import {
   Store,
   Globe
 } from "lucide-react";
+
+// Legacy home stays in the project; only a code change can enable it.
+const USE_CLASSIC_HOME = false;
 
 function slugify(text: string) {
   return text
@@ -233,6 +238,7 @@ export default function HomeClient({
   }, []);
 
   const [selectedAlbum, setSelectedAlbum] = useState<AlbumWithStats | null>(null);
+
   const [isAboutOpen, setIsAboutOpen] = useState(false);
   const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
   const [isUniversoOpen, setIsUniversoOpen] = useState(false);
@@ -435,23 +441,6 @@ export default function HomeClient({
       .catch(() => { });
   }, []);
 
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const handleSelectSongFromSearch = (track: TrackWithStats) => {
-    const album = albums.find(a => a.tracks.some(t => t.id === track.id));
-    if (album) {
-      const trackIndex = album.tracks.findIndex((t) => t.id === track.id);
-      updateUrl(album.id, null);
-      setCurrentPlaylist(album.tracks);
-      setCurrentTrackIndex(trackIndex);
-      setIsPlaying(true);
-      setCurrentTime(0);
-      setIsSearchOpen(false);
-      setSearchQuery("");
-    }
-  };
-
   // Timer effect for playback simulation (solo para pistas sin audio real)
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -496,12 +485,12 @@ export default function HomeClient({
   // Sincroniza play/pause con el elemento de audio real
   useEffect(() => {
     if (!hasRealAudio) return;
-    if (isPlaying && audio.ready) {
+    if (isPlaying && audio.readyTrackId === String(currentTrack?.id)) {
       audio.play();
     } else {
       audio.pause();
     }
-  }, [isPlaying, audio.ready, hasRealAudio]);
+  }, [isPlaying, audio.readyTrackId, hasRealAudio, currentTrack?.id]);
 
   // Volumen y silencio
   useEffect(() => {
@@ -530,11 +519,18 @@ export default function HomeClient({
   };
 
   const handleNext = () => {
-    if (isShuffle) {
-      const randomIndex = Math.floor(Math.random() * currentPlaylist.length);
-      setCurrentTrackIndex(randomIndex);
+    const count = currentPlaylist.length;
+    if (count === 0) return;
+    if (count === 1) {
+      // The track ID does not change, so restart the existing audio explicitly.
+      audio.seek(0);
+      if (isPlaying && hasRealAudio) audio.play();
+    } else if (isShuffle) {
+      // Choose another track; selecting the ended track would not reload it.
+      const offset = 1 + Math.floor(Math.random() * (count - 1));
+      setCurrentTrackIndex((currentTrackIndex + offset) % count);
     } else {
-      setCurrentTrackIndex((prev) => (prev + 1) % currentPlaylist.length);
+      setCurrentTrackIndex((prev) => (prev + 1) % count);
     }
     setCurrentTime(0);
   };
@@ -603,6 +599,28 @@ export default function HomeClient({
   };
 
   // Helper to draw geometric/gradient album art using CSS or load image
+  // Menú principal en desktop: vive arriba a la derecha, a la altura del buscador.
+  // Por debajo de lg sigue funcionando la barra inferior fija.
+  const navButtonClass = (active: boolean) =>
+    `flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors cursor-pointer ${active ? "bg-white/10 text-white" : "text-zinc-400 hover:bg-white/5 hover:text-white"}`;
+
+  const topNav = (
+    <nav aria-label="Navegación principal" className="hidden shrink-0 items-center gap-1 lg:flex">
+      <button onClick={goHome} className={navButtonClass(isHomeActive)}>
+        <HomeIcon className="h-5 w-5" />
+        <span>Inicio</span>
+      </button>
+      <button onClick={openAbout} className={navButtonClass(isAboutOpen)}>
+        <Info className="h-5 w-5" />
+        <span>Sobre conexión</span>
+      </button>
+      <button onClick={() => router.push("?view=universo", { scroll: false })} className={navButtonClass(isUniversoOpen)}>
+        <Globe className="h-5 w-5" />
+        <span>Universo</span>
+      </button>
+    </nav>
+  );
+
   const renderCoverArt = (coverArtDesign: string, coverGradient: string, sizeClass: string = "w-full h-full", coverImage?: string) => {
     if (coverImage) {
       const finalImage = coverImage.replace('/brand/', '/cd/');
@@ -672,6 +690,17 @@ export default function HomeClient({
 
       <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans select-none">
 
+        {/* BIBLIOTECA LATERAL: acompaña al home y a las páginas internas */}
+        <LibrarySidebar
+          albums={enabledAlbums}
+          totalTracks={totalTracks}
+          totalMinutes={totalMinutes}
+          isHomeActive={isHomeActive}
+          activeAlbumId={selectedAlbum?.id}
+          onHome={goHome}
+          onOpenAlbum={(albumId) => updateUrl(albumId, null)}
+        />
+
         {/* MAIN CONTENT AREA (full width, Netflix-style) */}
         <main
           ref={mainRef}
@@ -723,6 +752,7 @@ export default function HomeClient({
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <span className="text-zinc-400 text-xs font-semibold">Volver al disco</span>
+                  <div className="ml-auto">{topNav}</div>
                 </div>
               </div>
 
@@ -919,6 +949,7 @@ Que viaja directo a tu dirección.`;
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <span className="text-zinc-400 text-xs font-semibold">Volver al inicio</span>
+                  <div className="ml-auto">{topNav}</div>
                 </div>
               </div>
 
@@ -1016,6 +1047,7 @@ Que viaja directo a tu dirección.`;
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <span className="text-zinc-400 text-xs font-semibold">Volver al inicio</span>
+                  <div className="ml-auto">{topNav}</div>
                 </div>
               </div>
 
@@ -1112,6 +1144,7 @@ Que viaja directo a tu dirección.`;
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <span className="text-zinc-400 text-xs font-semibold">Volver al inicio</span>
+                  <div className="ml-auto">{topNav}</div>
                 </div>
               </div>
 
@@ -1136,6 +1169,31 @@ Que viaja directo a tu dirección.`;
                 </div>
               </div>
             </div>
+          ) : selectedAlbum === null && !USE_CLASSIC_HOME ? (
+            /* ========================================================================= */
+            /* HOME PAGE VIEW — interfaz principal                         */
+            /* ========================================================================= */
+            <AltHomeView
+              albums={enabledAlbums}
+              greeting={greeting}
+              totalAlbums={totalAlbums}
+              totalTracks={totalTracks}
+              totalMinutes={totalMinutes}
+              onOpenAlbum={(albumId) => updateUrl(albumId, null)}
+              topNav={topNav}
+              currentTrackId={currentTrack?.id}
+              isPlaying={isPlaying}
+              onPlay={(album, index) => {
+                if (currentTrack?.id === album.tracks[index]?.id) {
+                  setIsPlaying(!isPlaying);
+                  return;
+                }
+                setCurrentPlaylist(album.tracks);
+                setCurrentTrackIndex(index);
+                setCurrentTime(0);
+                setIsPlaying(true);
+              }}
+            />
           ) : selectedAlbum === null ? (
             /* ========================================================================= */
             /* HOME PAGE VIEW (Netflix-style hero + Discos row)                          */
@@ -1167,14 +1225,17 @@ Que viaja directo a tu dirección.`;
                       />
                     </div>
 
-                    {/* Random Song Button */}
-                    <button
-                      onClick={playRandomSong}
+                    {/* Random Song */}
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={playRandomSong}
                       className="flex items-center gap-3 px-6 py-2.5 md:px-8 md:py-3 bg-[#FFC107] hover:bg-[#FFD54F] text-black font-bold rounded-full transition-all hover:scale-105 shadow-lg shadow-[#FFC107]/20 cursor-pointer"
                     >
                       <Shuffle className="w-5 h-5" />
                       <span>Canción aleatoria</span>
                     </button>
+
+                    </div>
 
                     {/* Stats */}
                     <div className="flex items-center gap-2 md:gap-3 text-xs md:text-sm text-zinc-400 pt-2 font-medium">
@@ -1220,19 +1281,18 @@ Que viaja directo a tu dirección.`;
             /* ========================================================================= */
             /* ALBUM DETAILS VIEW                                                        */
             /* ========================================================================= */
-            <div className="relative z-10 flex flex-col w-full">
+            <div className="relative z-10 min-h-full w-full bg-[#080808] p-2 text-white md:p-3">
+            <div className="relative flex min-h-full w-full flex-col rounded-xl bg-[#121212]">
 
-              {/* BACKGROUND IMAGE (Top Right) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
-                {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
-                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-zinc-950 to-transparent z-10" />
-                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-zinc-950 to-transparent z-10" />
+              {/* Ambient color ties the album page to the yellow Conexión UI. */}
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-xl">
+                <div className="absolute inset-x-0 top-0 h-[520px] bg-gradient-to-b from-[#3b3217] via-[#201c12] to-[#121212]" />
+                <div className="absolute right-0 top-0 h-80 w-80 bg-[#FFC107]/10 blur-[110px]" />
               </div>
 
               {/* Sticky Header Controls & Summary Bar */}
-              <div className={`sticky top-0 z-30 py-3 flex items-center justify-between w-full transition-colors -mb-16 md:mb-0 relative ${showStickyHeader
-                ? "bg-zinc-950/95 border-b border-zinc-900/60 backdrop-blur-md"
+              <div className={`sticky top-2 md:top-3 z-30 flex w-full items-center justify-between rounded-t-xl py-3 transition-colors ${showStickyHeader
+                ? "bg-[#181818]/95 border-b border-white/10 backdrop-blur-xl"
                 : "bg-transparent border-b border-transparent"
                 }`}>
 
@@ -1241,11 +1301,12 @@ Que viaja directo a tu dirección.`;
                   <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-5 md:h-6 w-auto shrink-0" />
                 </div>
 
-                <div className="max-w-[880px] mx-auto w-full px-4 md:px-12 lg:px-16 xl:px-20 flex items-center justify-between relative z-10">
+                <div className="relative z-10 mx-auto flex w-full max-w-[1400px] items-center justify-between px-4 md:px-8 lg:px-10">
                   <div className="flex items-center gap-4">
                     <button
                       onClick={() => updateUrl(null, null)}
-                      className="p-2 rounded-full bg-black/40 hover:bg-black/60 border border-zinc-800/80 text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 text-white transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFC107] cursor-pointer"
+                      aria-label="Volver al inicio"
                     >
                       <ArrowLeft className="w-5 h-5" />
                     </button>
@@ -1259,45 +1320,38 @@ Que viaja directo a tu dirección.`;
                     </div>
                   </div>
 
-                  {/* Play button on sticky bar */}
-                  <div className={`${showStickyHeader ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    <button
-                      onClick={() => playEntireAlbum(selectedAlbum)}
-                      className="w-10 h-10 bg-emerald-500 hover:bg-emerald-400 text-black rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20 cursor-pointer"
-                    >
-                      <Play className="w-4 h-4 text-black" />
-                    </button>
+                  <div className="flex items-center gap-4">
+                    {/* Play button on sticky bar */}
+                    <div className={`${showStickyHeader ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      <button
+                        onClick={() => playEntireAlbum(selectedAlbum)}
+                        className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFC107] text-black shadow-lg shadow-black/30 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFC107] cursor-pointer"
+                        aria-label={`Reproducir ${selectedAlbum.title}`}
+                      >
+                        <Play className="w-4 h-4 text-black" />
+                      </button>
+                    </div>
+                    {topNav}
                   </div>
                 </div>
               </div>
 
-              {/* Album Body Content Centered */}
-              <div className="flex flex-col max-w-[880px] mx-auto w-full px-0 md:px-12 lg:px-16 xl:px-20 pb-44 md:pb-52">
+              {/* Album Body Content Centered (mobile y tablet) */}
+              <div className="relative mx-auto flex w-full max-w-[1400px] flex-col pb-44 md:pb-52 lg:hidden">
 
                 {/* Album Hero Info */}
-                <div className="relative pt-0 lg:pt-2 pb-4 md:pb-6 flex flex-col lg:flex-row items-center lg:items-end gap-5 md:gap-6 z-10">
+                <div className="relative z-10 flex flex-col items-center gap-6 px-5 pb-8 pt-5 md:flex-row md:items-end md:px-8 md:pb-10 md:pt-12 lg:px-10">
 
-                  {/* MOBILE FULL WIDTH BACKGROUND COVER */}
-                  <div className="absolute top-0 left-0 right-0 md:hidden z-0">
-                    <div className="w-full h-[360px] relative">
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-zinc-950/70 to-zinc-950 z-10" />
-                      <div className="w-full h-full overflow-hidden">
-                        {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full object-cover scale-105", selectedAlbum.coverImage)}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* DESKTOP COVER */}
-                  <div className="hidden md:flex md:w-24 md:h-24 lg:w-28 lg:h-28 xl:w-[clamp(120px,18vh,160px)] xl:h-[clamp(120px,18vh,160px)] shadow-2xl shrink-0 items-center justify-center overflow-hidden rounded-lg bg-zinc-900 z-10">
+                  {/* Album cover */}
+                  <div className="flex aspect-square w-[min(62vw,240px)] shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-900 shadow-2xl shadow-black/60 md:w-52 lg:w-60">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
                   {/* ALBUM METADATA */}
-                  <div className="flex-1 text-center lg:text-left space-y-2 md:space-y-3 z-10 px-4 md:px-0 pt-[180px] md:pt-0 w-full relative min-w-0">
-                    <span className="text-xs uppercase tracking-widest font-extrabold text-zinc-300 md:text-zinc-400 drop-shadow-md">ÁLBUM</span>
-                    <div className="flex flex-col lg:flex-row items-center lg:items-center lg:justify-between gap-2 lg:gap-4 w-full lg:pr-12">
-                      <h1 className="text-3xl md:text-4xl lg:text-5xl font-semibold text-white leading-tight tracking-tight drop-shadow-lg break-words">{selectedAlbum.title}</h1>
-                      <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-6 lg:h-8 w-auto opacity-80 shrink-0 hidden lg:block" />
+                  <div className="relative z-10 min-w-0 w-full flex-1 space-y-3 text-center md:text-left">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-white">Álbum</span>
+                    <div className="w-full">
+                      <h1 className="break-words text-4xl font-black leading-[0.95] tracking-[-0.04em] text-white drop-shadow-lg sm:text-5xl lg:text-7xl xl:text-8xl">{selectedAlbum.title}</h1>
                     </div>
 
                     {/* Album Intro (bajo del título, y arriba de la línea del año) */}
@@ -1309,14 +1363,14 @@ Que viaja directo a tu dirección.`;
                       if (!resolvedIntro) return null;
 
                       return (
-                        <p className="text-zinc-300 text-sm md:text-[15px] font-medium leading-relaxed drop-shadow-md select-text whitespace-pre-wrap animate-fade-in py-1">
+                        <p className="max-w-3xl whitespace-pre-wrap py-1 text-sm font-medium leading-relaxed text-zinc-300 animate-fade-in">
                           {resolvedIntro}
                         </p>
                       );
                     })()}
 
-                    <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 md:gap-3 text-xs drop-shadow-md">
-                      <div className="flex items-center gap-1 text-emerald-400 font-bold">
+                    <div className="flex flex-wrap items-center justify-center gap-2 text-xs md:justify-start md:text-sm">
+                      <div className="flex items-center gap-1 font-bold text-white">
                         <Music className="w-4 h-4" />
                         <span>{selectedAlbum.creator}</span>
                       </div>
@@ -1331,36 +1385,58 @@ Que viaja directo a tu dirección.`;
                 </div>
 
 
-                {/* Track List */}
-                <div className="pb-16 md:pb-24 px-4 md:px-0 relative z-10">
-                  <div className="w-full border-t border-zinc-900 mt-2">
+                {/* Playback controls */}
+                <div className="relative z-10 flex items-center gap-5 border-t border-white/5 bg-gradient-to-b from-black/15 to-transparent px-5 py-6 md:px-8 lg:px-10">
+                  <button
+                    onClick={() => playEntireAlbum(selectedAlbum)}
+                    className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFC107] text-black shadow-lg shadow-black/40 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FFC107]"
+                    aria-label={`Reproducir ${selectedAlbum.title}`}
+                  >
+                    <Play className="h-6 w-6 translate-x-0.5" fill="currentColor" />
+                  </button>
+                  <button
+                    onClick={() => setIsShuffle((value) => !value)}
+                    className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FFC107] ${isShuffle ? "text-[#FFC107]" : "text-zinc-400 hover:text-white"}`}
+                    aria-label={isShuffle ? "Desactivar reproducción aleatoria" : "Activar reproducción aleatoria"}
+                    aria-pressed={isShuffle}
+                  >
+                    <Shuffle className="h-6 w-6" />
+                  </button>
+                </div>
 
-                    <div className="grid grid-cols-12 gap-4 py-3 text-zinc-400 text-xs font-bold uppercase tracking-wider px-4 border-b border-zinc-900/60">
-                      <div className="col-span-8 md:col-span-7">Título</div>
+                {/* Track List */}
+                <div className="relative z-10 px-3 pb-16 md:px-8 md:pb-24 lg:px-10">
+                  <div className="w-full">
+
+                    <div className="grid grid-cols-12 gap-4 border-b border-white/10 px-3 py-3 text-xs font-medium text-zinc-400">
+                      <div className="col-span-8 md:col-span-7"># &nbsp;&nbsp; Título</div>
                       <div className="col-span-4 hidden md:block">Álbum</div>
                       <div className="col-span-4 md:col-span-1 text-right">Duración</div>
                     </div>
 
-                    <div className="mt-2 space-y-1">
+                    <div className="mt-2">
                       {selectedAlbum.tracks.map((track, index) => {
                         const isTrackActive = currentTrack && currentTrack.id === track.id;
                         return (
                           <div
                             key={track.id}
                             onClick={() => handleTrackSelectInAlbum(selectedAlbum.tracks, index)}
-                            className={`grid grid-cols-12 gap-4 py-2.5 items-center rounded px-4 group transition-colors cursor-pointer ${isTrackActive
-                              ? "bg-zinc-900/80"
-                              : "hover:bg-zinc-900/40"
+                            className={`group grid min-h-14 grid-cols-12 items-center gap-4 rounded-md px-3 py-2 transition-colors cursor-pointer ${isTrackActive
+                              ? "bg-white/10"
+                              : "hover:bg-white/5"
                               }`}
                           >
 
                             {/* Title Info */}
                             <div className="col-span-8 md:col-span-7 flex items-center gap-3 min-w-0">
-                              <div className="w-10 h-10 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                                {renderCoverArt(track.coverArtDesign, track.coverGradient, "w-full h-full", track.coverImage)}
+                              <div className="relative flex h-8 w-8 shrink-0 items-center justify-center text-sm text-zinc-400">
+                                <span className="group-hover:hidden">{isTrackActive && isPlaying ? <span className="text-[#FFC107]">♪</span> : index + 1}</span>
+                                <span className="hidden group-hover:block">
+                                  {isTrackActive && isPlaying ? <Pause className="h-4 w-4 text-white" fill="currentColor" /> : <Play className="h-4 w-4 text-white" fill="currentColor" />}
+                                </span>
                               </div>
                               <div className="truncate">
-                                <span className={`block font-semibold text-sm truncate ${isTrackActive ? 'text-emerald-500' : 'text-white'}`}>
+                                <span className={`block truncate text-sm font-medium ${isTrackActive ? 'text-[#FFC107]' : 'text-white'}`}>
                                   {track.title}
                                 </span>
                                 <span className="block text-zinc-400 text-xs truncate group-hover:text-zinc-300 mt-0.5">
@@ -1378,10 +1454,11 @@ Que viaja directo a tu dirección.`;
                             <div className="col-span-4 md:col-span-1 flex items-center justify-end gap-3 text-zinc-400 text-sm">
                               <button
                                 onClick={(e) => handleLike(e, track.id, track.likes)}
-                                className={`flex items-center gap-1 cursor-pointer rounded transition-colors ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'text-yellow-500' : 'text-zinc-500 hover:text-yellow-500'}`}
+                                className={`flex min-h-9 items-center gap-1 rounded px-1 transition-colors cursor-pointer ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'text-[#FFC107]' : 'text-zinc-500 hover:text-[#FFC107]'}`}
                                 title="Me gusta"
+                                aria-label={`Me gusta ${track.title}`}
                               >
-                                <HandIcon className={`w-3.5 h-3.5 ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'text-yellow-500' : ''}`} />
+                                <HandIcon className={`w-3.5 h-3.5 ${localLikes[track.id] && localLikes[track.id] > track.likes ? 'text-[#FFC107]' : ''}`} />
                                 <span className="text-xs">{localLikes[track.id] ?? track.likes}</span>
                               </button>
                               <span className="font-mono text-xs">{formatTime(track.duration)}</span>
@@ -1390,8 +1467,9 @@ Que viaja directo a tu dirección.`;
                                   e.stopPropagation();
                                   updateUrl(selectedAlbum.id, track.title);
                                 }}
-                                className="p-1 hover:text-emerald-500 cursor-pointer rounded transition-colors text-zinc-500 hover:text-white"
+                                className="flex min-h-9 min-w-9 items-center justify-center rounded text-zinc-500 transition-colors hover:text-[#FFC107] cursor-pointer"
                                 title="Ver letra"
+                                aria-label={`Ver letra de ${track.title}`}
                               >
                                 <ChevronRight className="w-4 h-4" />
                               </button>
@@ -1406,6 +1484,155 @@ Que viaja directo a tu dirección.`;
                 </div>
 
               </div>
+
+              {/* ===================================================================== */}
+              {/* DESKTOP: ficha del disco a dos columnas (info + tracklist)            */}
+              {/* ===================================================================== */}
+              <div className="relative z-10 mx-auto hidden w-full max-w-[1400px] grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] items-start gap-14 px-10 pb-44 pt-10 lg:grid xl:gap-20 xl:px-14">
+
+                {/* Columna izquierda: identidad del disco */}
+                <div className="flex flex-col lg:sticky lg:top-24">
+                  <span className="text-xs font-medium text-zinc-500">{selectedAlbum.creator}</span>
+
+                  <div className="mt-3 flex items-baseline justify-between gap-4">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-300">Álbum</span>
+                    <span className="font-mono text-xs text-zinc-400">{selectedAlbum.year}</span>
+                  </div>
+
+                  <h1 className="mt-2 break-words text-6xl font-black leading-[0.9] tracking-[-0.04em] text-white drop-shadow-lg xl:text-7xl">
+                    {selectedAlbum.title}
+                  </h1>
+
+                  {(() => {
+                    const resolvedIntro = selectedAlbum.aboutIntro && selectedAlbum.aboutIntro.trim()
+                      ? selectedAlbum.aboutIntro
+                      : (ALBUM_ABOUT_TEXTS[selectedAlbum.id]?.intro || ALBUM_ABOUT_TEXTS[slugify(selectedAlbum.title)]?.intro);
+
+                    if (!resolvedIntro) return null;
+
+                    return (
+                      <p className="mt-5 max-w-[46ch] whitespace-pre-wrap text-sm leading-relaxed text-zinc-300 animate-fade-in">
+                        {resolvedIntro}
+                      </p>
+                    );
+                  })()}
+
+                  <div className="mt-8 aspect-square w-full max-w-[420px] overflow-hidden rounded-md bg-zinc-900 shadow-2xl shadow-black/60">
+                    {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
+                  </div>
+
+                  {/* Resumen del disco: likes acumulados, duración y número de canciones */}
+                  <div className="mt-7 grid w-full max-w-[420px] grid-cols-3 gap-4 text-center">
+                    <div className="flex flex-col items-center gap-2">
+                      <HandIcon className="h-5 w-5 text-zinc-200" />
+                      <span className="text-xs text-zinc-400">Te gusta</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                      <Clock className="h-5 w-5 text-zinc-200" />
+                      <span className="text-xs text-zinc-400">{selectedAlbum.durationText}</span>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                      <Disc3 className="h-5 w-5 text-zinc-200" />
+                      <span className="text-xs text-zinc-400">{selectedAlbum.tracksCount}</span>
+                    </div>
+                  </div>
+
+                  <div className="mt-8 flex w-full max-w-[420px] items-center gap-4">
+                    <button
+                      onClick={() => playEntireAlbum(selectedAlbum)}
+                      className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFC107] text-black shadow-lg shadow-black/40 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FFC107] cursor-pointer"
+                      aria-label={`Reproducir ${selectedAlbum.title}`}
+                    >
+                      <Play className="h-6 w-6 translate-x-0.5" fill="currentColor" />
+                    </button>
+                    <button
+                      onClick={() => setIsShuffle((value) => !value)}
+                      className={`flex h-11 w-11 items-center justify-center rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#FFC107] cursor-pointer ${isShuffle ? "text-[#FFC107]" : "text-zinc-400 hover:text-white"}`}
+                      aria-label={isShuffle ? "Desactivar reproducción aleatoria" : "Activar reproducción aleatoria"}
+                      aria-pressed={isShuffle}
+                    >
+                      <Shuffle className="h-6 w-6" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Columna derecha: listado de canciones en tarjetas */}
+                <div className="flex flex-col gap-2">
+                  {selectedAlbum.tracks.map((track, index) => {
+                    const isTrackActive = currentTrack && currentTrack.id === track.id;
+                    const trackLikes = localLikes[track.id] ?? track.likes;
+                    const hasLiked = localLikes[track.id] !== undefined && localLikes[track.id] > track.likes;
+
+                    return (
+                      <div
+                        key={track.id}
+                        onClick={() => handleTrackSelectInAlbum(selectedAlbum.tracks, index)}
+                        className={`group flex cursor-pointer items-center gap-4 rounded-xl px-5 py-4 transition-colors ${isTrackActive
+                          ? "bg-[#FFC107]"
+                          : "bg-white/[0.03] hover:bg-white/[0.07]"
+                          }`}
+                      >
+
+                        {/* Índice / indicador de reproducción */}
+                        <div className="flex w-7 shrink-0 items-center justify-center">
+                          {isTrackActive ? (
+                            isPlaying
+                              ? <Pause className="h-4 w-4 text-black" fill="currentColor" />
+                              : <Play className="h-4 w-4 text-black" fill="currentColor" />
+                          ) : (
+                            <>
+                              <span className="font-mono text-xs text-zinc-500 group-hover:hidden">
+                                {String(index + 1).padStart(2, "0")}
+                              </span>
+                              <Play className="hidden h-4 w-4 text-white group-hover:block" fill="currentColor" />
+                            </>
+                          )}
+                        </div>
+
+                        {/* Título y duración */}
+                        <div className="min-w-0 flex-1">
+                          <span className={`block truncate text-[15px] font-bold ${isTrackActive ? "text-black" : "text-white"}`}>
+                            {track.title}
+                          </span>
+                          <span className={`mt-1 block font-mono text-xs ${isTrackActive ? "text-black/60" : "text-zinc-500"}`}>
+                            {formatTime(track.duration)}
+                          </span>
+                        </div>
+
+                        {/* Me gusta */}
+                        <button
+                          onClick={(e) => handleLike(e, track.id, track.likes)}
+                          className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded px-1 transition-colors cursor-pointer ${isTrackActive
+                            ? "text-black/70 hover:text-black"
+                            : hasLiked ? "text-[#FFC107]" : "text-zinc-500 hover:text-[#FFC107]"
+                            }`}
+                          title="Me gusta"
+                          aria-label={`Me gusta ${track.title}`}
+                        >
+                          <HandIcon className="h-3.5 w-3.5" />
+                          <span className="text-xs">{trackLikes}</span>
+                        </button>
+
+                        {/* Letra */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            updateUrl(selectedAlbum.id, track.title);
+                          }}
+                          className={`flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded transition-colors cursor-pointer ${isTrackActive ? "text-black/70 hover:text-black" : "text-zinc-500 hover:text-white"}`}
+                          title="Ver letra"
+                          aria-label={`Ver letra de ${track.title}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+            </div>
             </div>
           )}
 
@@ -1562,20 +1789,13 @@ Que viaja directo a tu dirección.`;
         </AnimatePresence>
 
         {/* BOTTOM NAVIGATION BAR (all screen sizes, per wireframe) */}
-        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-center md:gap-4 lg:gap-8 items-center z-50">
+        <nav className="fixed bottom-0 left-0 right-0 h-16 md:h-20 bg-zinc-950/95 backdrop-blur-md border-t border-zinc-900 flex justify-around md:justify-end md:gap-4 items-center md:pr-8 z-50 lg:hidden">
           <button
             onClick={goHome}
             className={`flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 cursor-pointer transition-colors ${isHomeActive ? 'text-white' : 'text-zinc-400 hover:text-white'}`}
           >
             <HomeIcon className="w-5 h-5 md:w-6 md:h-6" />
             <span className="text-[10px] md:text-[15px] font-medium">Inicio</span>
-          </button>
-          <button
-            onClick={() => setIsSearchOpen(true)}
-            className="flex-1 md:flex-none w-full md:w-32 lg:w-40 flex flex-col md:flex-row items-center justify-center gap-1 md:gap-3 text-zinc-400 hover:text-white cursor-pointer transition-colors bg-transparent border-0"
-          >
-            <Search className="w-5 h-5 md:w-6 md:h-6" />
-            <span className="text-[10px] md:text-[15px] font-medium">Buscar</span>
           </button>
           <button
             onClick={openAbout}
@@ -1601,103 +1821,6 @@ Que viaja directo a tu dirección.`;
             <span className="text-[10px] md:text-[15px] font-medium">Universo</span>
           </button>
         </nav>
-
-        {/* SEARCH MODAL */}
-        {isSearchOpen && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-[2px] z-[100] flex items-start justify-center p-4 pt-20 md:pt-32 animate-fade-in">
-            {/* Backdrop click to close */}
-            <div className="absolute inset-0" onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }} />
-
-            <div className="bg-zinc-900 border border-zinc-800 rounded-xl max-w-xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[60vh] relative z-10 animate-scale-in">
-              {/* Modal Header */}
-              <div className="p-4 border-b border-zinc-800 flex flex-col gap-3.5">
-                <h3 className="text-white font-bold text-base md:text-lg tracking-tight px-1">¿Buscas una canción?</h3>
-                <div className="flex items-center gap-3 w-full">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                    <input
-                      type="text"
-                      placeholder="¿Qué quieres escuchar?"
-                      autoFocus
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full bg-zinc-850 border border-zinc-700 text-white placeholder-zinc-500 rounded-lg px-4 py-2.5 pl-11 text-sm focus:outline-none focus:border-emerald-500 transition-colors"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white text-xs font-semibold"
-                      >
-                        Limpiar
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }}
-                    className="text-xs text-zinc-400 hover:text-white px-3 py-2 rounded bg-zinc-850 border border-zinc-700/60 cursor-pointer transition-colors"
-                  >
-                    Cerrar
-                  </button>
-                </div>
-              </div>
-
-              {/* Modal Body / Results */}
-              <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                {searchQuery.trim() === "" ? (
-                  <div className="p-8 text-center text-zinc-500 text-sm">
-                    <p className="font-semibold text-zinc-400">Busca canciones y discos</p>
-                    <p className="text-xs mt-1">Escribe el título de una canción de conexión...</p>
-                  </div>
-                ) : (
-                  <>
-                    {/* Filter tracks */}
-                    {(() => {
-                      const query = searchQuery.toLowerCase().trim();
-                      const filtered = albums
-                        .filter(a => !a.disabled)
-                        .flatMap(a => a.tracks)
-                        .filter(t =>
-                          t.title.toLowerCase().includes(query) ||
-                          t.album.toLowerCase().includes(query)
-                        );
-
-                      if (filtered.length === 0) {
-                        return (
-                          <div className="p-8 text-center text-zinc-500 text-sm">
-                            No se encontraron resultados para &ldquo;{searchQuery}&rdquo;
-                          </div>
-                        );
-                      }
-
-                      return filtered.map((track) => (
-                        <div
-                          key={track.id}
-                          onClick={() => handleSelectSongFromSearch(track)}
-                          className="flex items-center gap-3 p-2 hover:bg-zinc-800/60 rounded-lg transition-colors cursor-pointer group"
-                        >
-                          <div className="w-10 h-10 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                            {renderCoverArt(track.coverArtDesign, track.coverGradient, "w-full h-full", track.coverImage)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <span className="block font-bold text-sm text-white group-hover:text-emerald-400 transition-colors truncate">
-                              {track.title}
-                            </span>
-                            <span className="block text-zinc-400 text-xs truncate mt-0.5">
-                              Canción • {track.artist} • {track.album}
-                            </span>
-                          </div>
-                          <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-2">
-                            <Play className="w-4 h-4 text-emerald-400" />
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Toast Notification */}
         {toastMessage && (

@@ -20,7 +20,7 @@ export function useSecureAudio(options: { onEnded: () => void }) {
 
   const [time, setTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [readyTrackId, setReadyTrackId] = useState<string | null>(null);
 
   // Un único <audio> oculto para toda la app, creado fuera del DOM visible.
   useEffect(() => {
@@ -59,7 +59,7 @@ export function useSecureAudio(options: { onEnded: () => void }) {
     }
     setTime(0);
     setDuration(0);
-    setReady(false);
+    setReadyTrackId(null);
   }, []);
 
   const load = useCallback(function loadTrack(trackId: string, startAt = 0) {
@@ -72,14 +72,21 @@ export function useSecureAudio(options: { onEnded: () => void }) {
     activeTrackRef.current = trackId;
     setTime(0);
     setDuration(0);
-    setReady(false);
+    setReadyTrackId(null);
 
     const src = `/api/stream/${trackId}/playlist`;
 
-    if (Hls.isSupported()) {
+    if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+      // Prefer native HLS on Safari, including devices that also support MSE.
+      audio.src = src;
+      if (startAt > 0) audio.currentTime = startAt;
+      setReadyTrackId(trackId);
+    } else if (Hls.isSupported()) {
       const hls = new Hls({ startPosition: startAt });
       hlsRef.current = hls;
-      hls.on(Hls.Events.MANIFEST_PARSED, () => setReady(true));
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (hlsRef.current === hls) setReadyTrackId(trackId);
+      });
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (!data.fatal) return;
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
@@ -97,11 +104,6 @@ export function useSecureAudio(options: { onEnded: () => void }) {
       });
       hls.loadSource(src);
       hls.attachMedia(audio);
-    } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
-      // Safari reproduce HLS de forma nativa
-      audio.src = src;
-      if (startAt > 0) audio.currentTime = startAt;
-      setReady(true);
     }
   }, []);
 
@@ -131,5 +133,5 @@ export function useSecureAudio(options: { onEnded: () => void }) {
     }
   }, []);
 
-  return { load, stop, play, pause, seek, setVolume, time, duration, ready };
+  return { load, stop, play, pause, seek, setVolume, time, duration, readyTrackId };
 }
