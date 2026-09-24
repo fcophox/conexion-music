@@ -20,7 +20,6 @@ import {
   Heart,
   Shuffle,
   ChevronRight,
-  MoreVertical,
   Music,
   Disc3,
   Info,
@@ -176,6 +175,123 @@ function HandIcon({ className }: { className?: string }) {
   );
 }
 
+// Letra de una canción: la guardada desde el panel tiene prioridad; si no
+// existe, se usan las letras por defecto.
+function resolveLyrics(track: TrackWithStats): string {
+  if (track.lyrics && track.lyrics.trim()) {
+    return track.lyrics;
+  }
+  switch (track.title.toLowerCase()) {
+    case "papeles rotos":
+      return `Escribo en el viento palabras sin dueño
+Las sombras me miran romper este sueño
+Pedazos del alma que flotan sin rumbo
+Cartas vacías para cambiar el mundo.
+
+[Coro]
+Y son papeles rotos bajo la lluvia
+Historias perdidas que el tiempo diluye
+No busques respuestas en esta ceniza
+El viento se lleva lo que fue prisa.
+
+Cruzar la frontera de lo que perdimos
+Buscando las huellas que nunca seguimos
+El tiempo es un río que corre hacia atrás
+Papeles rotos que no vuelven más.`;
+    case "cero":
+      return `Empezar de nuevo desde la nada
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+Cruzar el abismo con la mirada
+El pulso se apaga, la luz se enciende
+El frío del alma que nadie comprende.
+
+[Coro]
+Volver a cero, volver a andar
+Bajo este cielo frente al mar
+Sin equipaje, sin dirección
+Solo el latido del corazón.
+
+El minutero gira al revés
+Olvidar las sombras de lo que fue
+Una nueva página por escribir
+Volver a cero para vivir.`;
+    case "imposibles":
+      return `Caminos de tierra que cruzan el fuego
+Las reglas del juego que ya no aceptamos
+Miradas de hielo en la gran ciudad
+Buscando un destello de honestidad.
+
+[Coro]
+Son imposibles que se hacen reales
+Rompiendo muros de cemento y metales
+Una palabra que enciende la luz
+Cargando el silencio de esta cruz.
+
+El tiempo no espera, la noche es eterna
+Una llama enciende la cueva interna
+Seguir la corriente no es la solución
+Imposibles que grita el corazón.`;
+    default:
+      return `Bajo este cielo de metal y neón
+Escucho el eco de tu voz en el viento
+Las luces bailan en la habitación
+Marcando el ritmo de este momento.
+
+[Coro]
+Y seguimos bailando en la oscuridad
+Buscando una chispa de eternidad
+Las horas pasan sin pedir perdón
+Alimentando esta dulce adicción.
+
+No queda espacio para la duda
+Cuando la música suena desnuda
+Déjate llevar por la vibración
+Que viaja directo a tu dirección.`;
+  }
+}
+
+// Texto descriptivo corto de un disco: el guardado desde el panel tiene
+// prioridad; si no existe, se usa el texto por defecto.
+function resolveAlbumIntro(album: Pick<Album, "id" | "title" | "aboutIntro">): string | undefined {
+  if (album.aboutIntro && album.aboutIntro.trim()) return album.aboutIntro;
+  return ALBUM_ABOUT_TEXTS[album.id]?.intro || ALBUM_ABOUT_TEXTS[slugify(album.title)]?.intro;
+}
+
 function BackgroundCrossfade({ currentBg, albums = [], slides = BACKGROUNDS }: { currentBg: string; albums?: any[]; slides?: string[] }) {
   const dbBgs = albums.map((a) => a.bgImage).filter(Boolean) as string[];
   const list = Array.from(new Set([...slides, ...dbBgs, currentBg].filter(Boolean)));
@@ -275,7 +391,6 @@ export default function HomeClient({
   const [expandedDetails, setExpandedDetails] = useState<Record<string, boolean>>({});
   const toggleDetails = (id: string) => setExpandedDetails((prev) => ({ ...prev, [id]: !prev[id] }));
   const mainRef = useRef<HTMLDivElement>(null);
-  const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [selectedTrackForLyrics, setSelectedTrackForLyrics] = useState<TrackWithStats | null>(null);
   const [hoveredAlbumId, setHoveredAlbumId] = useState<string | null>(null);
 
@@ -413,18 +528,7 @@ export default function HomeClient({
     if (mainRef.current) {
       mainRef.current.scrollTop = 0;
     }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShowStickyHeader(false);
   }, [selectedAlbum, selectedTrackForLyrics, isAboutOpen]);
-
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const scrollTop = e.currentTarget.scrollTop;
-    if (scrollTop > 380) {
-      setShowStickyHeader(true);
-    } else {
-      setShowStickyHeader(false);
-    }
-  };
 
   // Track playback state (tied to whichever track is currently playing globally)
   const [currentPlaylist, setCurrentPlaylist] = useState<TrackWithStats[]>([]);
@@ -702,6 +806,25 @@ export default function HomeClient({
     router.push("?view=about", { scroll: false });
   };
 
+  // Disco al que pertenece la canción abierta en la vista de letra.
+  const lyricsAlbum = selectedTrackForLyrics
+    ? albums.find((a) => a.tracks.some((t) => t.id === selectedTrackForLyrics.id))
+    : undefined;
+  const lyricsAlbumIntro = lyricsAlbum ? resolveAlbumIntro(lyricsAlbum) : undefined;
+  const isLyricsTrackPlaying = !!selectedTrackForLyrics && currentTrack?.id === selectedTrackForLyrics.id && isPlaying;
+
+  const toggleLyricsTrack = () => {
+    if (!selectedTrackForLyrics || !lyricsAlbum) return;
+    if (isLyricsTrackPlaying) {
+      setIsPlaying(false);
+      return;
+    }
+    setCurrentPlaylist(lyricsAlbum.tracks);
+    setCurrentTrackIndex(lyricsAlbum.tracks.findIndex((t) => t.id === selectedTrackForLyrics.id));
+    setIsPlaying(true);
+    setCurrentTime(0);
+  };
+
   const isHomeActive = !isAboutOpen && !isMarketplaceOpen && !isUniversoOpen && selectedAlbum === null && selectedTrackForLyrics === null;
 
   // Estadísticas del catálogo (solo discos habilitados suenan, pero se cuentan todos)
@@ -771,7 +894,7 @@ export default function HomeClient({
     <button
       onClick={onClick}
       aria-label={label}
-      className="flex h-12 shrink-0 items-center gap-2 rounded-full bg-black/65 pl-4 pr-5 text-sm font-medium text-zinc-300 shadow-xl shadow-black/50 backdrop-blur-xl transition-[background-color,color,transform] duration-150 ease-out hover:bg-black/80 hover:text-white active:scale-[0.97] cursor-pointer"
+      className="flex h-12 shrink-0 items-center gap-2 rounded-full text-sm font-medium text-zinc-300 transition-[color,transform] duration-150 ease-out hover:text-white active:scale-[0.97] cursor-pointer"
     >
       <ArrowLeft className="h-5 w-5" />
       <span>{label}</span>
@@ -867,7 +990,7 @@ export default function HomeClient({
             /* SONG LYRICS VIEW                                                          */
             /* ========================================================================= */
             <div className="relative z-10 flex-1 min-h-0 w-full bg-[#080808] p-2 text-white md:p-3 flex flex-col">
-              <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in">
+              <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in lg:overflow-y-hidden">
                 {/* Blurred Atmospheric Background (Mobile). Prioriza la imagen
                     propia de la canción; si no tiene, usa la carátula del disco. */}
                 <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 md:hidden">
@@ -882,20 +1005,23 @@ export default function HomeClient({
 
                 {/* BACKGROUND IMAGE (Top Right - Desktop). Si la canción tiene
                     imagen propia se muestra esa; si no, el fondo del disco. */}
-                <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                  {selectedTrackForLyrics.bgImage ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={selectedTrackForLyrics.bgImage}
-                      alt=""
-                      className="absolute inset-0 w-full h-full object-cover object-[right_top] opacity-100"
-                    />
-                  ) : (
-                    <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
-                  )}
-                  {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
-                  <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
-                  <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+                {/* Envoltorio sticky de altura cero: el fondo queda fijo arriba aunque se haga scroll. */}
+                <div className="pointer-events-none sticky top-0 z-0 h-0 w-full">
+                  <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none z-0 hidden md:block">
+                    {selectedTrackForLyrics.bgImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={selectedTrackForLyrics.bgImage}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover object-[right_top] opacity-100"
+                      />
+                    ) : (
+                      <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
+                    )}
+                    {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
+                    <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
+                    <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+                  </div>
                 </div>
 
                 {/* Header — matches Home header position */}
@@ -903,12 +1029,12 @@ export default function HomeClient({
                   {backButton(() => updateUrl(selectedAlbum?.id || null, null), "Volver al disco")}
                 </header>
 
-              {/* Main Content Layout */}
-              <div className="flex-1 w-full px-4 md:px-7 py-4 md:py-6 relative z-20 flex flex-col lg:flex-row gap-6 lg:gap-12 pb-44 md:pb-52">
+              {/* Main Content Layout (mobile y tablet) */}
+              <div className="flex-1 w-full px-4 md:px-7 py-4 md:py-6 relative z-20 flex flex-col gap-6 pb-44 md:pb-52 lg:hidden">
 
                 {/* Left Column: Cover and Info (Sticky on scroll) */}
-                <div className="w-full lg:w-[280px] xl:w-[360px] shrink-0 flex flex-col items-center lg:items-start text-center lg:text-left space-y-4 md:space-y-5 lg:sticky lg:top-20 lg:self-start">
-                  <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-[clamp(220px,28vh,300px)] lg:h-[clamp(220px,28vh,300px)] xl:w-[clamp(260px,34vh,360px)] xl:h-[clamp(260px,34vh,360px)] shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center">
+                <div className="w-full shrink-0 flex flex-col items-center text-center space-y-4 md:space-y-5">
+                  <div className="w-56 h-56 sm:w-72 sm:h-72 shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center">
                     {renderCoverArt(selectedTrackForLyrics.coverArtDesign, selectedTrackForLyrics.coverGradient, "w-full h-full", selectedTrackForLyrics.coverImage)}
                   </div>
 
@@ -922,24 +1048,10 @@ export default function HomeClient({
                   {/* Direct Play/Pause in Lyric view */}
                   <div className="pt-1">
                     <button
-                      onClick={() => {
-                        const album = albums.find(a => a.tracks.some(t => t.id === selectedTrackForLyrics.id));
-                        if (album) {
-                          const trackIndex = album.tracks.findIndex(t => t.id === selectedTrackForLyrics.id);
-                          const isThisPlaying = currentTrack && currentTrack.id === selectedTrackForLyrics.id && isPlaying;
-                          if (isThisPlaying) {
-                            setIsPlaying(false);
-                          } else {
-                            setCurrentPlaylist(album.tracks);
-                            setCurrentTrackIndex(trackIndex);
-                            setIsPlaying(true);
-                            setCurrentTime(0);
-                          }
-                        }
-                      }}
+                      onClick={toggleLyricsTrack}
                       className="flex items-center gap-3 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-sm md:text-base rounded-full transition-all hover:scale-105 shadow-lg shadow-emerald-500/25 cursor-pointer"
                     >
-                      {currentTrack && currentTrack.id === selectedTrackForLyrics.id && isPlaying ? (
+                      {isLyricsTrackPlaying ? (
                         <>
                           <Pause className="w-4 h-4 md:w-5 md:h-5 fill-current text-black" />
                           <span>Pausar canción</span>
@@ -959,115 +1071,72 @@ export default function HomeClient({
 
                   {/* Lyrics area */}
                   <div className="text-zinc-300 text-xs md:text-sm font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-3xl pt-2 pb-24 md:pb-28 pr-4">
-                    {(() => {
-                      // La letra guardada desde el panel de administración tiene
-                      // prioridad; si no existe, se usan las letras por defecto.
-                      if (selectedTrackForLyrics.lyrics && selectedTrackForLyrics.lyrics.trim()) {
-                        return selectedTrackForLyrics.lyrics;
-                      }
-                      switch (selectedTrackForLyrics.title.toLowerCase()) {
-                        case "papeles rotos":
-                          return `Escribo en el viento palabras sin dueño
-Las sombras me miran romper este sueño
-Pedazos del alma que flotan sin rumbo
-Cartas vacías para cambiar el mundo.
+                    {resolveLyrics(selectedTrackForLyrics)}
+                  </div>
+                </div>
 
-[Coro]
-Y son papeles rotos bajo la lluvia
-Historias perdidas que el tiempo diluye
-No busques respuestas en esta ceniza
-El viento se lleva lo que fue prisa.
+              </div>
 
-Cruzar la frontera de lo que perdimos
-Buscando las huellas que nunca seguimos
-El tiempo es un río que corre hacia atrás
-Papeles rotos que no vuelven más.`;
-                        case "cero":
-                          return `Empezar de nuevo desde la nada
-Cruzar el abismo con la mirada
-El pulso se apaga, la luz se enciende
-El frío del alma que nadie comprende.
+              {/* ===================================================================== */}
+              {/* DESKTOP: misma ficha que la página del disco, con la letra en lugar   */}
+              {/* del listado de canciones. Solo la letra hace scroll.                  */}
+              {/* ===================================================================== */}
+              <div className="relative z-10 mx-auto hidden min-h-0 w-full max-w-[1400px] flex-1 grid-cols-[320px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] items-start gap-x-12 gap-y-6 px-4 md:px-7 pt-10 lg:grid xl:gap-x-14">
 
-[Coro]
-Volver a cero, volver a andar
-Bajo este cielo frente al mar
-Sin equipaje, sin dirección
-Solo el latido del corazón.
-Cruzar el abismo con la mirada
-El pulso se apaga, la luz se enciende
-El frío del alma que nadie comprende.
+                {/* ROW 1: Title (ocupa ambas columnas) */}
+                <div className="col-span-2 flex flex-col w-full">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+                    Canción · {selectedTrackForLyrics.album}{lyricsAlbum ? ` ${lyricsAlbum.year}` : ""}
+                  </span>
 
-[Coro]
-Volver a cero, volver a andar
-Bajo este cielo frente al mar
-Sin equipaje, sin dirección
-Solo el latido del corazón.
-Cruzar el abismo con la mirada
-El pulso se apaga, la luz se enciende
-El frío del alma que nadie comprende.
+                  <h1 className="mt-2 break-words text-4xl font-black leading-[0.95] tracking-[-0.04em] text-white drop-shadow-lg xl:text-5xl">
+                    {selectedTrackForLyrics.title}
+                  </h1>
 
-[Coro]
-Volver a cero, volver a andar
-Bajo este cielo frente al mar
-Sin equipaje, sin dirección
-Solo el latido del corazón.
-Cruzar el abismo con la mirada
-El pulso se apaga, la luz se enciende
-El frío del alma que nadie comprende.
+                  {lyricsAlbumIntro && (
+                    <p className="mt-5 max-w-[640px] whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300 animate-fade-in">
+                      {lyricsAlbumIntro}
+                    </p>
+                  )}
+                </div>
 
-[Coro]
-Volver a cero, volver a andar
-Bajo este cielo frente al mar
-Sin equipaje, sin dirección
-Solo el latido del corazón.
-Cruzar el abismo con la mirada
-El pulso se apaga, la luz se enciende
-El frío del alma que nadie comprende.
+                {/* ROW 2: Cover & Stats (Left column) */}
+                <div className="col-span-1 flex flex-col w-full max-w-[320px] self-start">
+                  <div className="aspect-square w-full max-w-[max(180px,calc(100dvh-440px))] overflow-hidden rounded-[20px] bg-zinc-900 shadow-2xl shadow-black/60">
+                    {renderCoverArt(selectedTrackForLyrics.coverArtDesign, selectedTrackForLyrics.coverGradient, "w-full h-full", selectedTrackForLyrics.coverImage)}
+                  </div>
 
-[Coro]
-Volver a cero, volver a andar
-Bajo este cielo frente al mar
-Sin equipaje, sin dirección
-Solo el latido del corazón.
+                  {/* Resumen de la canción: reproducir, duración y me gusta */}
+                  <div className="mt-7 grid w-full max-w-[max(180px,calc(100dvh-440px))] grid-cols-3 gap-4 text-center">
+                    <button
+                      onClick={toggleLyricsTrack}
+                      className={`flex flex-col items-center gap-2.5 transition-colors cursor-pointer ${isLyricsTrackPlaying ? "text-[#FFC107]" : "text-zinc-300 hover:text-white"}`}
+                      aria-label={isLyricsTrackPlaying ? `Pausar ${selectedTrackForLyrics.title}` : `Reproducir ${selectedTrackForLyrics.title}`}
+                    >
+                      {isLyricsTrackPlaying
+                        ? <Pause className="h-5 w-5" fill="currentColor" />
+                        : <Play className="h-5 w-5" fill="currentColor" />}
+                      <span className="text-[11px] text-zinc-400">{isLyricsTrackPlaying ? "Pausar" : "Reproducir"}</span>
+                    </button>
+                    <div className="flex flex-col items-center gap-2.5">
+                      <Hourglass className="h-5 w-5 text-zinc-300" />
+                      <span className="text-[11px] text-zinc-400">{formatTime(selectedTrackForLyrics.duration)}</span>
+                    </div>
+                    <button
+                      onClick={(e) => handleLike(e, selectedTrackForLyrics.id, selectedTrackForLyrics.likes)}
+                      className="flex flex-col items-center gap-2.5 text-zinc-300 transition-colors hover:text-white cursor-pointer"
+                      aria-label={`Me gusta ${selectedTrackForLyrics.title}`}
+                    >
+                      <HandIcon className="h-5 w-5" />
+                      <span className="text-[11px] text-zinc-400">{localLikes[selectedTrackForLyrics.id] ?? selectedTrackForLyrics.likes}</span>
+                    </button>
+                  </div>
+                </div>
 
-El minutero gira al revés
-Olvidar las sombras de lo que fue
-Una nueva página por escribir
-Volver a cero para vivir.`;
-                        case "imposibles":
-                          return `Caminos de tierra que cruzan el fuego
-Las reglas del juego que ya no aceptamos
-Miradas de hielo en la gran ciudad
-Buscando un destello de honestidad.
-
-[Coro]
-Son imposibles que se hacen reales
-Rompiendo muros de cemento y metales
-Una palabra que enciende la luz
-Cargando el silencio de esta cruz.
-
-El tiempo no espera, la noche es eterna
-Una llama enciende la cueva interna
-Seguir la corriente no es la solución
-Imposibles que grita el corazón.`;
-                        default:
-                          return `Bajo este cielo de metal y neón
-Escucho el eco de tu voz en el viento
-Las luces bailan en la habitación
-Marcando el ritmo de este momento.
-
-[Coro]
-Y seguimos bailando en la oscuridad
-Buscando una chispa de eternidad
-Las horas pasan sin pedir perdón
-Alimentando esta dulce adicción.
-
-No queda espacio para la duda
-Cuando la música suena desnuda
-Déjate llevar por la vibración
-Que viaja directo a tu dirección.`;
-                      }
-                    })()}
+                {/* ROW 2: Letra (Right column) — único bloque con scroll */}
+                <div className="col-span-1 h-full min-h-0 overflow-y-auto overscroll-contain pb-44 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
+                  <div className="max-w-3xl whitespace-pre-line pt-3 text-sm font-medium leading-loose tracking-wide text-zinc-300 select-text">
+                    {resolveLyrics(selectedTrackForLyrics)}
                   </div>
                 </div>
 
@@ -1081,11 +1150,14 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 flex-1 min-h-0 w-full bg-[#080808] p-2 text-white md:p-3 flex flex-col">
               <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
-                {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
-                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
-                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+              {/* Envoltorio sticky de altura cero: el fondo queda fijo arriba aunque se haga scroll. */}
+              <div className="pointer-events-none sticky top-0 z-0 h-0 w-full">
+                <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
+                  <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
+                  {/* Degradados suaves restringidos solo a los bordes (izquierdo e inferior) */}
+                  <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
+                  <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+                </div>
               </div>
 
               {/* Header — matches Home header position */}
@@ -1180,10 +1252,13 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 flex-1 min-h-0 w-full bg-[#080808] p-2 text-white md:p-3 flex flex-col">
               <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
-                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
-                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+              {/* Envoltorio sticky de altura cero: el fondo queda fijo arriba aunque se haga scroll. */}
+              <div className="pointer-events-none sticky top-0 z-0 h-0 w-full">
+                <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
+                  <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
+                  <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
+                  <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+                </div>
               </div>
 
               {/* Header — matches Home header position */}
@@ -1263,10 +1338,13 @@ Que viaja directo a tu dirección.`;
               <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in">
 
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
-                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
-                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
-                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+              {/* Envoltorio sticky de altura cero: el fondo queda fijo arriba aunque se haga scroll. */}
+              <div className="pointer-events-none sticky top-0 z-0 h-0 w-full">
+                <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block">
+                  <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
+                  <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
+                  <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+                </div>
               </div>
 
               {/* BACKGROUND IMAGE (Top-Centered with Crossfade) */}
@@ -1429,54 +1507,22 @@ Que viaja directo a tu dirección.`;
             <div className="relative z-10 flex-1 min-h-0 w-full bg-[#080808] p-2 text-white md:p-3 flex flex-col">
             <div 
               ref={mainRef}
-              onScroll={handleScroll}
-              className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212]"
+              className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] lg:overflow-y-hidden"
             >
 
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
-              <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block rounded-tr-xl">
-                <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
-                <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
-                <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+              {/* Envoltorio sticky de altura cero: el fondo queda fijo arriba aunque se haga scroll. */}
+              <div className="pointer-events-none sticky top-0 z-0 h-0 w-full">
+                <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[50vh] min-h-[400px] overflow-hidden pointer-events-none z-0 hidden md:block rounded-tr-xl">
+                  <BackgroundCrossfade currentBg={currentBg} albums={albums} slides={slides} />
+                  <div className="absolute top-0 left-0 bottom-0 w-1/3 bg-gradient-to-r from-[#121212] to-transparent z-10" />
+                  <div className="absolute left-0 right-0 bottom-0 h-1/4 bg-gradient-to-t from-[#121212] to-transparent z-10" />
+                </div>
               </div>
 
               {/* Header — matches Home header position */}
-              <header className={`sticky top-0 z-30 flex flex-wrap items-center gap-3 rounded-t-xl p-4 md:px-7 md:py-5 lg:flex-nowrap transition-colors ${showStickyHeader
-                ? "bg-[#121212]/95 backdrop-blur-xl"
-                : ""
-                }`}>
-
-                {/* Centered Logo */}
-                <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity duration-300 pointer-events-none z-40 ${showStickyHeader ? 'opacity-80' : 'opacity-0'}`}>
-                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-5 md:h-6 w-auto shrink-0" />
-                </div>
-
+              <header className="sticky top-0 z-30 flex flex-wrap items-center gap-3 rounded-t-xl p-4 md:px-7 md:py-5 lg:flex-nowrap">
                 {backButton(() => updateUrl(null, null), "Volver al inicio")}
-
-                {/* Album details mini-summary */}
-                <div className={`flex items-center gap-3 ${showStickyHeader ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <div className="w-8 h-8 rounded overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center">
-                    {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
-                  </div>
-                  <span className="font-bold text-sm text-white truncate max-w-[150px] sm:max-w-xs">{selectedAlbum.title}</span>
-                </div>
-
-                <div className="flex items-center gap-4 lg:ml-auto">
-                  {/* Play button on sticky bar */}
-                  <div className={`${showStickyHeader ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                    <button
-                      onClick={() => playEntireAlbum(selectedAlbum)}
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-[#FFC107] text-black shadow-lg shadow-black/30 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FFC107] cursor-pointer"
-                      aria-label={`Reproducir ${selectedAlbum.title}`}
-                    >
-                      <Play className="w-4 h-4 text-black" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Hueco del menú fijo: reserva su caja para que el play y el
-                    resumen del disco nunca queden debajo. */}
-                <div aria-hidden className="hidden h-12 w-[470px] shrink-0 xl:block" />
               </header>
 
               {/* Album Body Content Centered (mobile y tablet) */}
@@ -1486,22 +1532,19 @@ Que viaja directo a tu dirección.`;
                 <div className="relative z-10 flex flex-col items-center gap-6 px-4 md:px-7 pb-8 pt-5 md:flex-row md:items-end md:pb-10 md:pt-12">
 
                   {/* Album cover */}
-                  <div className="flex aspect-square w-[min(62vw,240px)] shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-900 shadow-2xl shadow-black/60 md:w-52 lg:w-60">
+                  <div className="flex aspect-square w-[min(48vw,180px)] shrink-0 items-center justify-center overflow-hidden rounded-md bg-zinc-900 shadow-2xl shadow-black/60 md:w-40 lg:w-48">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
                   {/* ALBUM METADATA */}
                   <div className="relative z-10 min-w-0 w-full flex-1 space-y-3 text-center md:text-left">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-white">Álbum</span>
                     <div className="w-full">
-                      <h1 className="break-words text-4xl font-black leading-[0.95] tracking-[-0.04em] text-white drop-shadow-lg sm:text-5xl lg:text-7xl xl:text-8xl">{selectedAlbum.title}</h1>
+                      <h1 className="break-words text-3xl font-black leading-[0.95] tracking-[-0.04em] text-white drop-shadow-lg sm:text-4xl">{selectedAlbum.title}</h1>
                     </div>
 
                     {/* Album Intro (bajo del título, y arriba de la línea del año) */}
                     {(() => {
-                      const resolvedIntro = selectedAlbum.aboutIntro && selectedAlbum.aboutIntro.trim()
-                        ? selectedAlbum.aboutIntro
-                        : (ALBUM_ABOUT_TEXTS[selectedAlbum.id]?.intro || ALBUM_ABOUT_TEXTS[slugify(selectedAlbum.title)]?.intro || (selectedAlbum.id === "blackout" || slugify(selectedAlbum.title) === "blackout" ? ALBUM_ABOUT_TEXTS["blackout"]?.intro : undefined));
+                      const resolvedIntro = resolveAlbumIntro(selectedAlbum);
 
                       if (!resolvedIntro) return null;
 
@@ -1631,45 +1674,43 @@ Que viaja directo a tu dirección.`;
               {/* ===================================================================== */}
               {/* DESKTOP: ficha del disco a dos columnas (info + tracklist)            */}
               {/* ===================================================================== */}
-              <div className="relative z-10 mx-auto hidden w-full max-w-[1400px] grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)] items-start gap-x-14 gap-y-6 px-4 md:px-7 pb-44 pt-10 lg:grid xl:gap-x-14">
+              {/* Solo el tracklist hace scroll: la cuadrícula ocupa el alto
+                  disponible y la fila inferior se limita con minmax(0,1fr). */}
+              <div className="relative z-10 mx-auto hidden min-h-0 w-full max-w-[1400px] flex-1 grid-cols-[320px_minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)] items-start gap-x-12 gap-y-6 px-4 md:px-7 pt-10 lg:grid xl:gap-x-14">
                 
-                {/* ROW 1: Title and Intro (Left column) */}
-                <div className="col-span-1 flex flex-col w-full max-w-[420px]">
-                  <div className="flex items-baseline justify-between gap-4">
-                    <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-300">Álbum</span>
-                    <span className="font-mono text-xs font-semibold text-zinc-400">{selectedAlbum.year}</span>
-                  </div>
+                {/* ROW 1: Title and Intro (ocupa ambas columnas para que la intro respire a lo ancho) */}
+                <div className="col-span-2 flex flex-col w-full">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
+                    Álbum {selectedAlbum.year}
+                  </span>
 
-                  <h1 className="mt-2 break-words text-6xl font-black leading-[0.9] tracking-[-0.04em] text-white drop-shadow-lg xl:text-7xl">
+                  <h1 className="mt-2 break-words text-4xl font-black leading-[0.95] tracking-[-0.04em] text-white drop-shadow-lg xl:text-5xl">
                     {selectedAlbum.title}
                   </h1>
 
                   {(() => {
-                    const resolvedIntro = selectedAlbum.aboutIntro && selectedAlbum.aboutIntro.trim()
-                      ? selectedAlbum.aboutIntro
-                      : (ALBUM_ABOUT_TEXTS[selectedAlbum.id]?.intro || ALBUM_ABOUT_TEXTS[slugify(selectedAlbum.title)]?.intro);
+                    const resolvedIntro = resolveAlbumIntro(selectedAlbum);
 
                     if (!resolvedIntro) return null;
 
                     return (
-                      <p className="mt-5 whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300 animate-fade-in">
+                      <p className="mt-5 max-w-[640px] whitespace-pre-wrap text-[13px] leading-relaxed text-zinc-300 animate-fade-in">
                         {resolvedIntro}
                       </p>
                     );
                   })()}
                 </div>
-                
-                {/* ROW 1: Right column (Empty to align tracklist with cover) */}
-                <div className="col-span-1"></div>
 
                 {/* ROW 2: Cover & Stats (Left column) */}
-                <div className="col-span-1 flex flex-col lg:sticky lg:top-24 w-full max-w-[420px] self-start">
-                  <div className="aspect-square w-full overflow-hidden rounded-[20px] bg-zinc-900 shadow-2xl shadow-black/60">
+                <div className="col-span-1 flex flex-col w-full max-w-[320px] self-start">
+                  {/* La columna no hace scroll: en pantallas bajas la carátula se
+                      encoge para que el resumen de abajo siga visible. */}
+                  <div className="aspect-square w-full max-w-[max(180px,calc(100dvh-440px))] overflow-hidden rounded-[20px] bg-zinc-900 shadow-2xl shadow-black/60">
                     {renderCoverArt(selectedAlbum.coverArtDesign, selectedAlbum.coverGradient, "w-full h-full", selectedAlbum.coverImage)}
                   </div>
 
                   {/* Resumen del disco: likes acumulados, duración y número de canciones */}
-                  <div className="mt-7 grid w-full grid-cols-3 gap-4 text-center">
+                  <div className="mt-7 grid w-full max-w-[max(180px,calc(100dvh-440px))] grid-cols-3 gap-4 text-center">
                     <div className="flex flex-col items-center gap-2.5">
                       <Heart className="h-5 w-5 text-zinc-300" />
                       <span className="text-[11px] text-zinc-400">Te gusta</span>
@@ -1685,8 +1726,8 @@ Que viaja directo a tu dirección.`;
                   </div>
                 </div>
 
-                {/* ROW 2: Tracklist (Right column) */}
-                <div className="col-span-1 flex flex-col gap-1">
+                {/* ROW 2: Tracklist (Right column) — único bloque con scroll */}
+                <div className="col-span-1 flex h-full min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain pb-44 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
                   {selectedAlbum.tracks.map((track, index) => {
                     const isTrackActive = currentTrack && currentTrack.id === track.id;
                     const trackLikes = localLikes[track.id] ?? track.likes;
@@ -1737,17 +1778,17 @@ Que viaja directo a tu dirección.`;
                           <span className="text-[11px]">{trackLikes}</span>
                         </button>
 
-                        {/* Más opciones (3 puntos) */}
+                        {/* Ver letra (chevron) */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             updateUrl(selectedAlbum.id, track.title);
                           }}
                           className="flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded transition-colors cursor-pointer text-zinc-500 hover:text-white"
-                          title="Opciones"
-                          aria-label={`Opciones de ${track.title}`}
+                          title="Ver letra"
+                          aria-label={`Ver letra de ${track.title}`}
                         >
-                          <MoreVertical className="h-4 w-4" />
+                          <ChevronRight className="h-4 w-4" />
                         </button>
                       </div>
                     );
