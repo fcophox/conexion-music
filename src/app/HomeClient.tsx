@@ -882,10 +882,10 @@ export default function HomeClient({
 
   // El menú vive fijo al viewport (no dentro del header de cada vista) para que
   // caiga siempre en el mismo pixel: 12px del borde de la card + 28px/20px del header.
-  // El wrapper repite el max-w de la home para alinearse con la card en pantallas anchas.
+  // Las cards ocupan todo el ancho, así que el menú va siempre al extremo derecho.
   const floatingTopNav = (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] hidden justify-center px-3 pt-3 xl:flex">
-      <div className="flex w-full max-w-[1800px] justify-end pr-7 pt-5">{topNav}</div>
+      <div className="flex w-full justify-end pr-7 pt-5">{topNav}</div>
     </div>
   );
 
@@ -1148,7 +1148,7 @@ export default function HomeClient({
             /* ABOUT / SOBRE CONEXIÓN VIEW                                               */
             /* ========================================================================= */
             <div className="relative z-10 flex-1 min-h-0 w-full bg-[#080808] p-2 text-white md:p-3 flex flex-col">
-              <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in">
+              <div className="relative flex flex-1 min-h-0 w-full flex-col overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] animate-fade-in no-scrollbar">
               {/* BACKGROUND IMAGE (Top Right - Desktop) */}
               {/* Envoltorio sticky de altura cero: el fondo queda fijo arriba aunque se haga scroll. */}
               <div className="pointer-events-none sticky top-0 z-0 h-0 w-full">
@@ -1165,83 +1165,66 @@ export default function HomeClient({
                 {backButton(() => updateUrl(null, null), "Volver al inicio")}
               </header>
 
-              {/* HERO SECTION (Half Screen Height) */}
-              <div className="relative w-full min-h-[50vh] flex flex-col justify-center items-center text-center px-4 md:px-7 py-8 z-10">
-                <div className="max-w-3xl flex flex-col items-center space-y-4 md:space-y-6 animate-fade-in">
-                  <img src="/brand/conexionlogo.svg" alt="Conexión" className="h-12 md:h-16 lg:h-20 w-auto drop-shadow-2xl" />
-                  <span className="text-xs font-bold tracking-widest text-emerald-400 uppercase">Sobre conexión</span>
-                  <p className="text-zinc-300 text-sm md:text-base lg:text-lg leading-relaxed max-w-3xl mx-auto">
+              {/* Contenido con el mismo ancho máximo y ritmo que el home */}
+              <div className="relative z-10 mx-auto w-full max-w-[1400px] pb-44 md:pb-52">
+                <section className="px-4 pb-8 pt-2 md:px-7 animate-fade-in">
+                  <p className="mb-1 text-xs font-semibold tracking-widest text-[#FFD54F] uppercase">Tu música. Tu conexión.</p>
+                  <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Sobre conexión</h1>
+                  <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-300 md:text-base">
                     Conexión es un proyecto grunge/post-grunge nacido desde el caos mental, la ansiedad y la necesidad de convertir heridas en sonido.
                   </p>
-                </div>
-              </div>
+                </section>
 
-              {/* Albums blocks */}
-              <div className="w-full flex flex-col gap-12 md:gap-16 lg:gap-20 pb-44 md:pb-52 z-10 max-w-4xl">
-                {albums.map((album, index) => (
-                  <div key={album.id} className="w-full max-w-[880px] mx-auto px-4 md:px-7 relative grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-12">
-                    {/* Left Column: Cover */}
-                    <div className="w-full lg:col-span-1 flex flex-col items-center lg:items-start text-center lg:text-left space-y-3">
-                      <div className="w-56 h-56 sm:w-72 sm:h-72 lg:w-full lg:h-auto lg:aspect-square shadow-2xl rounded-xl overflow-hidden bg-zinc-900 flex items-center justify-center cursor-pointer hover:scale-[1.02] transition-transform" onClick={() => updateUrl(album.id, null)}>
-                        {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
-                      </div>
-                    </div>
-
-                    {/* Right Column: Title, Intro & Description */}
-                    <div className="w-full lg:col-span-2 space-y-3">
-                      {(() => {
-                        const content = ALBUM_ABOUT_TEXTS[album.id] || ALBUM_ABOUT_TEXTS[slugify(album.title)] || (index === 4 ? ALBUM_ABOUT_TEXTS["blackout"] : undefined);
-                        const isExpanded = !!expandedDetails[album.id];
-                        const intro = (album.aboutIntro && album.aboutIntro.trim()) ? album.aboutIntro : content?.intro;
-                        const details = (album.aboutDetails && album.aboutDetails.trim()) ? album.aboutDetails : (content?.details || album.description);
-                        const titleDisplay = album.disabled ? `Disco ${index + 1}` : album.title;
-
-                        return (
-                          <>
-                            <div className="space-y-1">
-                              <span className="text-xs font-bold tracking-widest text-zinc-500 uppercase">{album.year}</span>
-                              <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight">
-                                {titleDisplay}
-                              </h2>
-                            </div>
-
-                            <div className="text-zinc-300 text-sm md:text-base font-medium leading-relaxed tracking-wide font-sans select-text max-w-2xl py-1 space-y-3">
-                              {intro && (
-                                <p className="text-zinc-200 font-medium leading-relaxed">
-                                  {intro}
-                                </p>
-                              )}
-                              {details && (
-                                <>
-                                  <button
-                                    onClick={() => toggleDetails(album.id)}
-                                    className="flex items-center gap-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-400 transition-colors cursor-pointer py-1"
-                                  >
-                                    <span>{isExpanded ? "Ocultar descripción" : "Ver descripción"}</span>
-                                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                                  </button>
-                                  {isExpanded && (
-                                    <div className="pt-2 text-zinc-400 text-sm leading-relaxed space-y-3 border-t border-zinc-900/80 animate-fade-in">
-                                      <p className="whitespace-pre-line">{details}</p>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          </>
-                        );
-                      })()}
-
-                      {/* Album details: tracks count */}
-                      <div className="flex items-center gap-3 text-xs md:text-sm text-zinc-400 font-medium pt-2">
-                        <span className="flex items-center gap-1.5">
-                          <Music className="w-4 h-4 text-emerald-400" />
-                          <span className="text-zinc-200 font-bold">{album.tracks.length}</span> canciones
-                        </span>
-                      </div>
-                    </div>
+                <section aria-label="Discografía" className="px-4 md:px-7">
+                  <div className="mb-4 flex items-baseline justify-between">
+                    <h2 className="text-xl font-bold tracking-tight">Discografía</h2>
+                    <span className="text-xs text-zinc-400">{albums.length} discos</span>
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+                    {albums.map((album, index) => {
+                      const content = ALBUM_ABOUT_TEXTS[album.id] || ALBUM_ABOUT_TEXTS[slugify(album.title)] || (index === 4 ? ALBUM_ABOUT_TEXTS["blackout"] : undefined);
+                      const isExpanded = !!expandedDetails[album.id];
+                      const intro = (album.aboutIntro && album.aboutIntro.trim()) ? album.aboutIntro : content?.intro;
+                      const details = (album.aboutDetails && album.aboutDetails.trim()) ? album.aboutDetails : (content?.details || album.description);
+                      const titleDisplay = album.disabled ? `Disco ${index + 1}` : album.title;
+
+                      return (
+                        <article key={album.id} className="flex flex-col gap-4 rounded-lg p-3 transition-colors hover:bg-[#1a1a1a] sm:flex-row sm:gap-5 md:p-4">
+                          <button
+                            onClick={() => updateUrl(album.id, null)}
+                            aria-label={`Abrir ${titleDisplay}`}
+                            className="aspect-square w-40 shrink-0 self-center overflow-hidden rounded-md bg-zinc-900 shadow-lg transition-transform hover:scale-[1.02] cursor-pointer sm:w-36 sm:self-start md:w-40"
+                          >
+                            {renderCoverArt(album.coverArtDesign, album.coverGradient, "w-full h-full", album.disabled ? "/cd/cover_cover_conexion.png" : album.coverImage)}
+                          </button>
+
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <p className="text-xs text-zinc-400">{album.year} · {album.tracks.length} canciones</p>
+                            <h3 className="text-lg font-bold leading-tight text-white">{titleDisplay}</h3>
+                            {intro && (
+                              <p className="text-sm leading-relaxed text-zinc-300">{intro}</p>
+                            )}
+                            {details && (
+                              <>
+                                <button
+                                  onClick={() => toggleDetails(album.id)}
+                                  className="flex items-center gap-1.5 py-1 text-xs font-bold text-zinc-500 transition-colors hover:text-zinc-300 cursor-pointer"
+                                >
+                                  <span>{isExpanded ? "Ocultar descripción" : "Ver descripción"}</span>
+                                  {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                </button>
+                                {isExpanded && (
+                                  <p className="whitespace-pre-line border-t border-white/5 pt-2 text-sm leading-relaxed text-zinc-400 animate-fade-in select-text">{details}</p>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                </section>
               </div>
             </div>
             </div>

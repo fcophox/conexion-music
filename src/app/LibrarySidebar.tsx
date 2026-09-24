@@ -25,10 +25,10 @@ export default function LibrarySidebar({ albums, totalTracks, totalMinutes, isHo
     </button>
 
     <nav aria-label="Navegación musical">
-      <button onClick={onHome} className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-3 font-bold ${isHomeActive ? "bg-white/10 text-white" : "font-semibold text-zinc-400 hover:text-white"} ${focus}`}><Home size={21} />Inicio</button>
+      <button onClick={onHome} className={`flex min-h-12 w-full items-center gap-3 rounded-lg px-2 font-bold ${isHomeActive ? "bg-white/10 text-white" : "font-semibold text-zinc-400 hover:text-white"} ${focus}`}><Home size={21} />Inicio</button>
     </nav>
 
-    <div className="mb-4 mt-8 flex items-center justify-between text-zinc-400"><span className="flex items-center gap-3 text-sm font-bold"><Library size={21} />Tu biblioteca</span><span className="text-xs">{albums.length}</span></div>
+    <div className="mb-4 mt-8 flex items-center justify-between px-2 text-zinc-400"><span className="flex items-center gap-3 text-sm font-bold"><Library size={21} />Tu biblioteca</span><span className="text-xs">{albums.length}</span></div>
 
     <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
       {albums.map(album => <button key={album.id} onClick={() => onOpenAlbum(album.id)} aria-current={activeAlbumId === album.id ? "true" : undefined} className={`flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors ${activeAlbumId === album.id ? "bg-white/10" : "hover:bg-white/5"} ${focus}`}><Cover album={album} className="h-11 w-11 rounded" /><span className="min-w-0"><span className={`block truncate text-sm font-semibold ${activeAlbumId === album.id ? "text-[#FFC107]" : ""}`}>{album.title}</span><span className="block truncate text-xs text-zinc-400">Álbum · {album.artist}</span></span></button>)}
