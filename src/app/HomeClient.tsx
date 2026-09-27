@@ -962,8 +962,9 @@ export default function HomeClient({
           <div className={`w-full h-1/2 bg-zinc-950 transition-transform duration-[800ms] ease-[cubic-bezier(0.87,0,0.13,1)] ${isLoaded ? 'translate-y-full' : 'translate-y-0'}`} />
 
           {/* Pulsing Logo centered */}
-          <div className={`absolute inset-0 flex items-center justify-center transition-all duration-500 ease-in-out ${isLoaded ? 'opacity-0 scale-90 blur-md' : 'opacity-100 scale-100 blur-0'}`}>
+          <div className={`absolute inset-0 flex flex-col items-center justify-center gap-3 transition-all duration-500 ease-in-out ${isLoaded ? 'opacity-0 scale-90 blur-md' : 'opacity-100 scale-100 blur-0'}`}>
             <img src="/brand/conexionlogo.svg" alt="Cargando..." className="h-10 w-auto animate-[pulse_1.5s_ease-in-out_infinite]" />
+            <span className="text-sm font-semibold tracking-[0.3em] text-zinc-400">2.0</span>
           </div>
         </div>
       )}
