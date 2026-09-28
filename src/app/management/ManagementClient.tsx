@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import LyricsSyncer from "./LyricsSyncer";
+import { estimateTimings, isSynced, parseLyrics, serializeLyrics } from "@/lib/lyrics";
 import {
   GripVertical,
   Play,
@@ -2321,6 +2323,7 @@ function TrackDetailsDrawer({
 }) {
   const [visible, setVisible] = useState(false);
   const [lyrics, setLyrics] = useState(track.lyrics ?? "");
+  const [syncingLyrics, setSyncingLyrics] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [removeImage, setRemoveImage] = useState(false);
@@ -2581,7 +2584,37 @@ function TrackDetailsDrawer({
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-400" />
               <span className="text-sm font-bold text-white">Letra de la canción</span>
+              {!syncingLyrics && lyrics.trim() && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Sin tiempos guardados: parte de los automáticos (los
+                    // mismos que ve el público) para revisar y corregir.
+                    const parsed = parseLyrics(lyrics);
+                    if (!isSynced(parsed)) {
+                      setLyrics(serializeLyrics(estimateTimings(parsed, track.duration)));
+                      setSaved(false);
+                    }
+                    setSyncingLyrics(true);
+                  }}
+                  className="ml-auto text-xs font-semibold text-emerald-400 hover:text-emerald-300 cursor-pointer"
+                >
+                  Revisar sincronización
+                </button>
+              )}
             </div>
+            {syncingLyrics ? (
+              <LyricsSyncer
+                trackId={track.id}
+                duration={track.duration}
+                lyrics={lyrics}
+                onChange={(next) => {
+                  setLyrics(next);
+                  setSaved(false);
+                }}
+                onDone={() => setSyncingLyrics(false)}
+              />
+            ) : (
             <textarea
               value={lyrics}
               onChange={(e) => {
@@ -2592,6 +2625,7 @@ function TrackDetailsDrawer({
               rows={12}
               className="w-full bg-zinc-900 border border-zinc-800 text-zinc-200 placeholder-zinc-600 rounded-xl px-4 py-3 text-sm leading-relaxed focus:outline-none focus:border-emerald-500 transition-colors resize-y font-sans"
             />
+            )}
           </div>
 
           {error && (

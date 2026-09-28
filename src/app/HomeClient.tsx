@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useSecureAudio } from "@/hooks/useSecureAudio";
+import LyricsView from "./LyricsView";
 import AppleCoverFlow from "./AppleCoverFlow";
 import AltHomeView from "./AltHomeView";
 import LibrarySidebar from "./LibrarySidebar";
@@ -811,7 +812,8 @@ export default function HomeClient({
     ? albums.find((a) => a.tracks.some((t) => t.id === selectedTrackForLyrics.id))
     : undefined;
   const lyricsAlbumIntro = lyricsAlbum ? resolveAlbumIntro(lyricsAlbum) : undefined;
-  const isLyricsTrackPlaying = !!selectedTrackForLyrics && currentTrack?.id === selectedTrackForLyrics.id && isPlaying;
+  const isLyricsTrackCurrent = !!selectedTrackForLyrics && currentTrack?.id === selectedTrackForLyrics.id;
+  const isLyricsTrackPlaying = isLyricsTrackCurrent && isPlaying;
 
   const toggleLyricsTrack = () => {
     if (!selectedTrackForLyrics || !lyricsAlbum) return;
@@ -1071,9 +1073,14 @@ export default function HomeClient({
                 <div className="flex-1 w-full space-y-4 md:space-y-6">
 
                   {/* Lyrics area */}
-                  <div className="text-zinc-300 text-xs md:text-sm font-medium leading-relaxed md:leading-loose whitespace-pre-line tracking-wide font-sans select-text max-w-3xl pt-2 pb-24 md:pb-28 pr-4">
-                    {resolveLyrics(selectedTrackForLyrics)}
-                  </div>
+                  <LyricsView
+                    lyrics={resolveLyrics(selectedTrackForLyrics)}
+                    time={displayTime}
+                    duration={isLyricsTrackCurrent ? displayDuration : selectedTrackForLyrics.duration}
+                    isCurrent={isLyricsTrackCurrent}
+                    onSeek={seekTo}
+                    className="text-zinc-300 text-xs md:text-sm font-medium leading-relaxed md:leading-loose tracking-wide font-sans select-text max-w-3xl pt-2 pb-24 md:pb-28 pr-4"
+                  />
                 </div>
 
               </div>
@@ -1136,9 +1143,14 @@ export default function HomeClient({
 
                 {/* ROW 2: Letra (Right column) — único bloque con scroll */}
                 <div className="col-span-1 h-full min-h-0 overflow-y-auto overscroll-contain pb-44 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
-                  <div className="max-w-3xl whitespace-pre-line pt-3 text-sm font-medium leading-loose tracking-wide text-zinc-300 select-text">
-                    {resolveLyrics(selectedTrackForLyrics)}
-                  </div>
+                  <LyricsView
+                    lyrics={resolveLyrics(selectedTrackForLyrics)}
+                    time={displayTime}
+                    duration={isLyricsTrackCurrent ? displayDuration : selectedTrackForLyrics.duration}
+                    isCurrent={isLyricsTrackCurrent}
+                    onSeek={seekTo}
+                    className="max-w-3xl pt-3 text-sm font-medium leading-loose tracking-wide text-zinc-300 select-text"
+                  />
                 </div>
 
               </div>
