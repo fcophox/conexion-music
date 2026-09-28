@@ -46,7 +46,7 @@ export default function AltHomeView({ albums, greeting, totalTracks, totalMinute
     <div className="w-full flex-1 flex flex-col min-h-0">
       <div className="relative flex-1 min-w-0 overflow-y-auto overflow-x-hidden rounded-xl bg-[#121212] no-scrollbar">
         
-        <div className="pb-48 md:pb-52">
+        <div className="pb-48 md:pb-52 lg:pb-24 xl:pb-8">
           {/* Crossfade background image — top right, inside the card */}
           <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[420px] md:h-[500px] overflow-hidden pointer-events-none z-0 hidden md:block">
             {allBgs.map((bg) => (

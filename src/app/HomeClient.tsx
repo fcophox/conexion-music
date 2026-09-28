@@ -1107,7 +1107,7 @@ export default function HomeClient({
                 </header>
 
               {/* Main Content Layout (mobile y tablet) */}
-              <div className="flex-1 w-full px-4 md:px-7 py-4 md:py-6 relative z-20 flex flex-col gap-6 pb-44 md:pb-52 lg:hidden">
+              <div className="flex-1 w-full px-4 md:px-7 py-4 md:py-6 relative z-20 flex flex-col gap-6 pb-44 md:pb-52 lg:pb-24 xl:pb-8 lg:hidden">
 
                 {/* Left Column: Cover and Info (Sticky on scroll) */}
                 <div className="w-full shrink-0 flex flex-col items-center text-center space-y-4 md:space-y-5">
@@ -1216,7 +1216,7 @@ export default function HomeClient({
                 </div>
 
                 {/* ROW 2: Letra (Right column) — único bloque con scroll */}
-                <div className="col-span-1 h-full min-h-0 overflow-y-auto overscroll-contain pb-44 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
+                <div className="col-span-1 h-full min-h-0 overflow-y-auto overscroll-contain pb-44 lg:pb-24 xl:pb-8 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
                   <LyricsView
                     lyrics={resolveLyrics(selectedTrackForLyrics)}
                     time={displayTime}
@@ -1253,7 +1253,7 @@ export default function HomeClient({
               </header>
 
               {/* Contenido con el mismo ancho máximo y ritmo que el home */}
-              <div className="relative z-10 mx-auto w-full max-w-[1400px] pb-44 md:pb-52">
+              <div className="relative z-10 mx-auto w-full max-w-[1400px] pb-44 md:pb-52 lg:pb-24 xl:pb-8">
                 <section className="px-4 pb-8 pt-2 md:px-7 animate-fade-in">
                   <p className="mb-1 text-xs font-semibold tracking-widest text-[#FFD54F] uppercase">Tu música. Tu conexión.</p>
                   <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Sobre conexión</h1>
@@ -1337,7 +1337,7 @@ export default function HomeClient({
               </header>
 
               {/* Marketplace Main Container (Max width 880px, same as albums, centered) */}
-              <div className="w-full max-w-[880px] mx-auto px-4 md:px-7 py-8 pb-44 flex flex-col gap-8">
+              <div className="w-full max-w-[880px] mx-auto px-4 md:px-7 py-8 pb-44 lg:pb-24 xl:pb-8 flex flex-col gap-8">
 
                 {/* Header Title */}
                 <div className="space-y-1 text-center lg:text-left">
@@ -1491,7 +1491,7 @@ export default function HomeClient({
             /* ========================================================================= */
             /* HOME PAGE VIEW (Netflix-style hero + Discos row)                          */
             /* ========================================================================= */
-            <div className="relative z-10 w-full pb-44 md:pb-52">
+            <div className="relative z-10 w-full pb-44 md:pb-52 lg:pb-24 xl:pb-8">
 
               {/* BACKGROUND IMAGE (Top Right) */}
               <div className="absolute top-0 right-0 w-full md:w-3/5 lg:w-[750px] xl:w-[850px] max-w-full h-[320px] md:h-[420px] lg:h-[460px] overflow-hidden pointer-events-none -z-10">
@@ -1596,7 +1596,7 @@ export default function HomeClient({
               </header>
 
               {/* Album Body Content Centered (mobile y tablet) */}
-              <div className="relative mx-auto flex w-full max-w-[1400px] flex-col pb-44 md:pb-52 lg:hidden">
+              <div className="relative mx-auto flex w-full max-w-[1400px] flex-col pb-44 md:pb-52 lg:pb-24 xl:pb-8 lg:hidden">
 
                 {/* Album Hero Info */}
                 <div className="relative z-10 flex flex-col items-center gap-6 px-4 md:px-7 pb-8 pt-5 md:flex-row md:items-end md:pb-10 md:pt-12">
@@ -1797,7 +1797,7 @@ export default function HomeClient({
                 </div>
 
                 {/* ROW 2: Tracklist (Right column) — único bloque con scroll */}
-                <div className="col-span-1 flex h-full min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain pb-44 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
+                <div className="col-span-1 flex h-full min-h-0 flex-col gap-1 overflow-y-auto overscroll-contain pb-44 lg:pb-24 xl:pb-8 no-scrollbar [mask-image:linear-gradient(to_bottom,transparent,black_20px)]">
                   {selectedAlbum.tracks.map((track, index) => {
                     const isTrackActive = currentTrack && currentTrack.id === track.id;
                     const trackLikes = localLikes[track.id] ?? track.likes;
