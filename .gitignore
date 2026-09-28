@@ -45,6 +45,8 @@ next-env.d.ts
 # El HLS cifrado y las claves SÍ se versionan porque el servidor los lee en
 # runtime (/api/stream) y Vercel necesita empaquetarlos en la función.
 /media/masters
+# pistas de voz para sincronizar letras (npm run align): solo locales
+/media/vocals
 
 # datos del catálogo (fuente de verdad editable desde /management)
 /data

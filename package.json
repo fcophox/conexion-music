@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "align": "uv run scripts/align_lyrics.py"
   },
   "dependencies": {
     "convex": "^1.42.1",
