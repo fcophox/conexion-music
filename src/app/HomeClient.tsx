@@ -982,6 +982,80 @@ export default function HomeClient({
           activeAlbumId={selectedAlbum?.id}
           onHome={goHome}
           onOpenAlbum={(albumId) => updateUrl(albumId, null)}
+          player={
+            <AnimatePresence>
+              {currentTrack && (() => {
+                const progress = displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0;
+                const hasLiked = (localLikes[currentTrack.id] ?? currentTrack.likes) > currentTrack.likes;
+                return (
+                  <motion.div
+                    key="sidebar-player"
+                    role="region"
+                    aria-label={`Reproduciendo ${currentTrack.title}`}
+                    initial={{ opacity: 0, transform: reduceMotion ? "none" : "translateY(12px)" }}
+                    animate={{ opacity: 1, transform: "translateY(0px)" }}
+                    exit={{ opacity: 0, transform: reduceMotion ? "none" : "translateY(12px)" }}
+                    transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                    className="mt-4 shrink-0 rounded-lg bg-white/5 p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-11 w-11 shrink-0 overflow-hidden rounded bg-zinc-800">
+                        {renderCoverArt(currentTrack.coverArtDesign, currentTrack.coverGradient, "w-full h-full", currentTrack.coverImage)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-semibold text-white">{currentTrack.title}</span>
+                        <span className="block truncate text-xs text-zinc-400">{currentTrack.artist}</span>
+                      </div>
+                      <button
+                        onClick={(e) => { if (!hasLiked) handleLike(e, currentTrack.id, currentTrack.likes); }}
+                        className={`shrink-0 cursor-pointer transition-transform hover:scale-110 ${hasLiked ? "text-yellow-500" : "text-zinc-400 hover:text-yellow-500"}`}
+                        title={hasLiked ? "Te gusta" : "Dar me gusta"}
+                      >
+                        <HandIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="mt-3 flex items-center gap-2 font-mono text-[10px] text-zinc-400">
+                      <span className="shrink-0">{formatTime(displayTime)}</span>
+                      <div onClick={handleSeek} className="h-1 flex-1 cursor-pointer overflow-hidden rounded-full bg-zinc-800/80">
+                        <div className="pointer-events-none h-full bg-zinc-100 transition-all duration-300" style={{ width: `${progress}%` }} />
+                      </div>
+                      <span className="shrink-0">{formatTime(displayDuration)}</span>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between">
+                      <button onClick={() => setIsMuted(!isMuted)} aria-label={isMuted ? "Activar sonido" : "Silenciar"} className="cursor-pointer text-zinc-400 hover:text-white">
+                        {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                      </button>
+                      <div className="flex items-center gap-4">
+                        <button onClick={handlePrev} aria-label="Anterior" className="cursor-pointer text-zinc-400 transition-colors hover:text-white">
+                          <SkipBack className="h-4 w-4 fill-current" />
+                        </button>
+                        <button onClick={handlePlayPause} aria-label={isPlaying ? "Pausar" : "Reproducir"} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white text-black shadow-md transition-all hover:scale-105">
+                          {isPlaying ? <Pause className="h-3.5 w-3.5 fill-current text-black" /> : <Play className="h-3.5 w-3.5 text-black" />}
+                        </button>
+                        <button onClick={handleNext} aria-label="Siguiente" className="cursor-pointer text-zinc-400 transition-colors hover:text-white">
+                          <SkipForward className="h-4 w-4 fill-current" />
+                        </button>
+                      </div>
+                      <input
+                        type="range"
+                        min="0"
+                        max="100"
+                        aria-label="Volumen"
+                        value={isMuted ? 0 : volume}
+                        onChange={(e) => {
+                          setVolume(Number(e.target.value));
+                          if (isMuted) setIsMuted(false);
+                        }}
+                        className="h-1 w-12 cursor-pointer appearance-none rounded-lg bg-zinc-800 accent-zinc-100"
+                      />
+                    </div>
+                  </motion.div>
+                );
+              })()}
+            </AnimatePresence>
+          }
         />
 
         {/* MAIN CONTENT AREA (full width, Netflix-style) */}
@@ -1798,7 +1872,8 @@ export default function HomeClient({
 
         </main>
 
-        {/* GLOBAL PLAYER BAR: solo aparece cuando hay una canción seleccionada. */}
+        {/* GLOBAL PLAYER BAR: solo aparece cuando hay una canción seleccionada.
+            En lg+ se oculta: el reproductor vive en la biblioteca lateral. */}
         <AnimatePresence mode="wait">
           {currentTrack && (
             <motion.div
@@ -1819,7 +1894,7 @@ export default function HomeClient({
                   : "translate(-50%, -125%)",
               }}
               transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
-              className="fixed bottom-[88px] md:bottom-[112px] left-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5 will-change-transform"
+              className="lg:hidden fixed bottom-[88px] md:bottom-[112px] left-1/2 w-[calc(100%-2rem)] max-w-[720px] bg-zinc-950/45 backdrop-blur-md border border-white/10 rounded-full z-45 shadow-xl shadow-black/60 px-4 md:px-6 py-2 md:py-2.5 will-change-transform"
             >
           <div className="flex items-center justify-between h-12 md:h-14 gap-3 md:gap-4 w-full">
 
