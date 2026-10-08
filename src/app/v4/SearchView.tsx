@@ -82,7 +82,7 @@ export function SearchView({ albums, player, onOpenPlayer }: Props) {
       </header>
 
       <div
-        className={`flex flex-1 items-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${player.track ? "pb-48" : ""}`}
+        className={`flex flex-1 items-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${player.track ? "pb-60" : ""}`}
       >
         {results.length > 0 ? (
           <TrackRow

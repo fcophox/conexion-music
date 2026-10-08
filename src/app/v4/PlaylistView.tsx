@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Music, Pause, Play, Plus } from "lucide-react";
 import type { Album, Track } from "@/lib/catalog-types";
 import { albumCover, trackImage } from "./covers";
 import { DragRow } from "./DragRow";
+import { TiltCard } from "./TiltCard";
 import type { V4Player } from "./useV4Player";
 
 function formatDuration(seconds: number) {
@@ -22,6 +23,25 @@ type Props = {
 export function PlaylistView({ albums, player, onOpenPlayer }: Props) {
   const [albumId, setAlbumId] = useState(albums[0]?.id);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  // Envuelve el selector, el "+" y la lista: un clic fuera de aquí la cierra.
+  const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Con la lista abierta, un clic en cualquier otro lado o Esc la cierra.
+  useEffect(() => {
+    if (!isPickerOpen) return;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (!pickerRef.current?.contains(e.target as Node)) setIsPickerOpen(false);
+    };
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsPickerOpen(false);
+    };
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [isPickerOpen]);
 
   const album = albums.find((a) => a.id === albumId) ?? albums[0];
 
@@ -45,14 +65,22 @@ export function PlaylistView({ albums, player, onOpenPlayer }: Props) {
       <header className="relative z-10 px-24 py-8 sm:px-32">
         <div className="mx-auto max-w-3xl">
           <h1 className="font-black tracking-tight text-white">Playlist</h1>
-          <div className="relative mt-6 flex items-center justify-between">
+          <div ref={pickerRef} className="relative mt-6 flex items-center justify-between">
             <button
               type="button"
               onClick={() => setIsPickerOpen((open) => !open)}
               aria-expanded={isPickerOpen}
               aria-haspopup="listbox"
-              className="flex items-center gap-1.5 rounded-lg font-bold tracking-tight text-white transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-2.5 rounded-lg font-bold tracking-tight text-white transition-colors hover:text-zinc-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
+              {/* Portada del disco elegido, a la izquierda del nombre */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                key={album.id}
+                src={albumCover(album)}
+                alt=""
+                className="size-9 rounded-md object-cover animate-fade-in"
+              />
               {album.title}
               <ChevronDown
                 className={`size-4 text-zinc-500 transition-transform duration-200 ${isPickerOpen ? "rotate-180" : ""}`}
@@ -97,7 +125,7 @@ export function PlaylistView({ albums, player, onOpenPlayer }: Props) {
 
       {/* Deja espacio abajo para el mini reproductor cuando está visible */}
       <div
-        className={`flex flex-1 items-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${player.track ? "pb-48" : ""}`}
+        className={`flex flex-1 items-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${player.track ? "pb-60" : ""}`}
       >
         <TrackRow
           key={album.id}
@@ -176,7 +204,7 @@ function TrackCard({
   const label = `Reproducir ${track.title}`;
 
   return (
-    <li className="group w-52 shrink-0 sm:w-60">
+    <li className="group relative w-52 shrink-0 hover:z-10 sm:w-60">
       <button
         type="button"
         // aria-disabled en vez de disabled: así se puede arrastrar desde la tarjeta.
@@ -186,7 +214,7 @@ function TrackCard({
         aria-current={isCurrent ? "true" : undefined}
         className="block w-full text-left focus-visible:outline-none"
       >
-        <div
+        <TiltCard
           className={`relative aspect-[4/5] overflow-hidden rounded-3xl bg-zinc-900 ring-white/40 transition-[scale] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-focus-visible:ring-2 ${isCurrent ? "scale-[0.94]" : ""}`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -195,7 +223,7 @@ function TrackCard({
             alt=""
             loading="lazy"
             draggable={false}
-            className={`size-full object-cover transition-[opacity,scale] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04] motion-reduce:transition-none ${imageOpacity}`}
+            className={`size-full object-cover transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${imageOpacity}`}
           />
           <span className="absolute left-4 top-3.5 text-[0.65rem] text-white/60">
             {album.year}
@@ -216,7 +244,7 @@ function TrackCard({
               )}
             </span>
           )}
-        </div>
+        </TiltCard>
 
         <div className="mt-3 px-3">
           <span className="rounded-md bg-white/5 px-1.5 py-0.5 text-[0.6rem] text-zinc-500">

@@ -12,6 +12,9 @@ export function useV4Player() {
   const [available, setAvailable] = useState<Set<number>>(new Set());
   const [current, setCurrent] = useState<Current | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Volumen de 0 a 100; silenciar no lo pierde.
+  const [volume, setVolume] = useState(100);
+  const [isMuted, setIsMuted] = useState(false);
 
   // Busca la siguiente (o anterior) canción del disco que tenga audio.
   const findPlayable = (step: 1 | -1) => {
@@ -32,9 +35,16 @@ export function useV4Player() {
     setCurrent({ album: current.album, index: nextIndex });
   };
 
-  const { load, play, pause, seek, readyTrackId, time, duration } = useSecureAudio({
-    onEnded: next,
-  });
+  const {
+    load,
+    play,
+    pause,
+    seek,
+    setVolume: setAudioVolume,
+    readyTrackId,
+    time,
+    duration,
+  } = useSecureAudio({ onEnded: next });
 
   const track = current ? current.album.tracks[current.index] : null;
   const trackId = track?.id;
@@ -60,6 +70,10 @@ export function useV4Player() {
       pause();
     }
   }, [isPlaying, readyTrackId, trackId, play, pause]);
+
+  useEffect(() => {
+    setAudioVolume(volume / 100, isMuted);
+  }, [volume, isMuted, setAudioVolume]);
 
   // Cuenta UNA reproducción cuando la pista empieza a sonar.
   const countedRef = useRef<number | null>(null);
@@ -101,6 +115,14 @@ export function useV4Player() {
     next,
     prev,
     seek,
+    volume,
+    isMuted,
+    // Mover el control quita el silencio, como en cualquier reproductor.
+    changeVolume: (value: number) => {
+      setVolume(value);
+      setIsMuted(false);
+    },
+    toggleMute: () => setIsMuted((muted) => !muted),
   };
 }
 

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SpecularButton } from "./SpecularButton";
 
 export function HeroView() {
   return (
@@ -16,12 +16,7 @@ export function HeroView() {
           letras y música alternativa en un solo lugar.
         </p>
 
-        <Link
-          href="/"
-          className="inline-flex h-12 items-center justify-center rounded-full bg-emerald-500 px-10 font-semibold text-zinc-950 transition-[transform,background-color] duration-150 hover:bg-emerald-400 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          Iniciar
-        </Link>
+        <SpecularButton href="/">Iniciar</SpecularButton>
       </div>
     </section>
   );

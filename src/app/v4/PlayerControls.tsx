@@ -1,18 +1,32 @@
 "use client";
 
 import { useRef, useState, type PointerEvent, type ReactNode } from "react";
-import { Music, Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import {
+  Disc3,
+  Music,
+  Pause,
+  Play,
+  SkipBack,
+  SkipForward,
+  Volume1,
+  Volume2,
+  VolumeX,
+} from "lucide-react";
 import type { V4Player } from "./useV4Player";
+import { WakeSlider } from "./WakeSlider";
 
 type Props = {
   player: V4Player;
   // Si se pasa, el título se vuelve un botón (lo usa el mini reproductor).
   onTitleClick?: () => void;
+  // Mini reproductor: el disco va en la píldora de la derecha, con ícono de
+  // disco, en lugar del número de pista.
+  isCompact?: boolean;
 };
 
 // Título, barra de progreso y controles. Lo comparten el reproductor completo
 // y el mini reproductor flotante para que se vean iguales.
-export function PlayerControls({ player, onTitleClick }: Props) {
+export function PlayerControls({ player, onTitleClick, isCompact = false }: Props) {
   const { track, album, index, isPlaying, togglePlay, next, prev, hasNext } = player;
   if (!track || !album) return null;
 
@@ -31,18 +45,28 @@ export function PlayerControls({ player, onTitleClick }: Props) {
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          {title}
-          <span className="mt-1 inline-block rounded-md bg-white/10 px-1.5 py-0.5 text-[0.6rem] text-white/60">
-            {album.title}
+      {isCompact ? (
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">{title}</div>
+          <span className="flex min-w-0 max-w-[50%] shrink-0 items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[0.65rem] font-medium text-white/80 backdrop-blur">
+            <Disc3 className="size-3 shrink-0" />
+            <span className="truncate">{album.title}</span>
           </span>
         </div>
-        <span className="mt-1 flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[0.65rem] font-medium text-white/80 backdrop-blur">
-          <Music className="size-2.5" />
-          {index + 1}
-        </span>
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            {title}
+            <span className="mt-1 inline-block rounded-md bg-white/10 px-1.5 py-0.5 text-[0.6rem] text-white/60">
+              {album.title}
+            </span>
+          </div>
+          <span className="mt-1 flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[0.65rem] font-medium text-white/80 backdrop-blur">
+            <Music className="size-2.5" />
+            {index + 1}
+          </span>
+        </div>
+      )}
 
       <ProgressBar player={player} />
 
@@ -61,7 +85,36 @@ export function PlayerControls({ player, onTitleClick }: Props) {
           <SkipForward className="size-6" fill="currentColor" />
         </ControlButton>
       </div>
+
+      <VolumeControl player={player} />
     </>
+  );
+}
+
+// Volumen: botón de silencio y control de barras (Wake Slider).
+function VolumeControl({ player }: { player: V4Player }) {
+  const { volume, isMuted, changeVolume, toggleMute } = player;
+  const shown = isMuted ? 0 : volume;
+  const Icon = shown === 0 ? VolumeX : shown < 50 ? Volume1 : Volume2;
+
+  return (
+    <div className="mt-3 flex items-center gap-3">
+      <button
+        type="button"
+        aria-label={isMuted ? "Activar sonido" : "Silenciar"}
+        aria-pressed={isMuted}
+        onClick={toggleMute}
+        className="flex size-8 shrink-0 items-center justify-center rounded-full text-white/60 transition-[color,scale] duration-200 hover:text-white active:scale-[0.88] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <Icon className="size-4" />
+      </button>
+      <WakeSlider
+        value={shown}
+        onChange={changeVolume}
+        ariaLabel="Volumen"
+        className="min-w-0 flex-1"
+      />
+    </div>
   );
 }
 

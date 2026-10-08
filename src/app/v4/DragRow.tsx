@@ -9,6 +9,7 @@ import {
   type ReactNode,
   type WheelEvent,
 } from "react";
+import { GradualBlur } from "./GradualBlur";
 
 // Distancia mínima (px) para que un clic se considere arrastre.
 const DRAG_THRESHOLD = 5;
@@ -32,7 +33,7 @@ type Props = {
 };
 
 // Fila horizontal: se arrastra con el mouse (con inercia), se mueve con la
-// rueda y muestra un degradado a la derecha mientras quede contenido por ver.
+// rueda y difumina el borde derecho mientras quede contenido por ver.
 // Los hijos deben ser <li>.
 export function DragRow({ children }: Props) {
   const dragRef = useRef<DragState | null>(null);
@@ -155,14 +156,18 @@ export function DragRow({ children }: Props) {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onClickCapture={handleClickCapture}
-        className={`no-scrollbar flex w-full select-none gap-5 overflow-x-auto pb-4 pl-24 pr-10 sm:pl-32 ${cursorClass}`}
+        className={`no-scrollbar flex w-full select-none gap-5 overflow-x-auto py-6 pl-24 pr-10 sm:pl-32 ${cursorClass}`}
       >
         {children}
       </ul>
+      {/* Borde derecho: desenfoque progresivo y un degradado suave encima */}
       <div
         aria-hidden
-        className={`pointer-events-none absolute inset-y-0 right-0 w-40 bg-gradient-to-l from-background via-background/70 to-transparent transition-opacity duration-300 sm:w-56 ${hasMoreRight ? "opacity-100" : "opacity-0"}`}
-      />
+        className={`pointer-events-none absolute inset-y-0 right-0 w-40 transition-opacity duration-300 sm:w-56 ${hasMoreRight ? "opacity-100" : "opacity-0"}`}
+      >
+        <GradualBlur position="right" className="absolute inset-0" />
+        <div className="absolute inset-0 bg-gradient-to-l from-background/80 to-transparent" />
+      </div>
     </div>
   );
 }

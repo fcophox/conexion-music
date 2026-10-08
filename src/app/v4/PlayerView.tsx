@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useDragControls, useReducedMotion, type PanInfo } from "framer-motion";
 import { MessageSquareQuote, Undo2 } from "lucide-react";
 import LyricsView from "../LyricsView";
-import { HandIcon } from "./HandIcon";
 import { trackImage } from "./covers";
 import { PlayerControls } from "./PlayerControls";
+import { PulseHeart } from "./PulseHeart";
 import type { Likes } from "./useLikes";
 import type { V4Player } from "./useV4Player";
 
@@ -135,10 +135,11 @@ export function PlayerView({ player, likes, onClose }: Props) {
           >
             <MessageSquareQuote className="size-4" />
           </button>
-          <LikeButton
+          <PulseHeart
+            key={track.id}
             isLiked={likes.isLiked(track.id)}
             onLike={() => likes.like(track.id)}
-            trackTitle={track.title}
+            label={likes.isLiked(track.id) ? `Te gusta ${track.title}` : `Me gusta ${track.title}`}
           />
         </div>
       </header>
@@ -200,47 +201,5 @@ export function PlayerView({ player, likes, onClose }: Props) {
         </AnimatePresence>
       </div>
     </motion.div>
-  );
-}
-
-type LikeButtonProps = {
-  isLiked: boolean;
-  onLike: () => void;
-  trackTitle: string;
-};
-
-// "Me gusta" con la mano rockera: mismo estilo que el botón de volver.
-function LikeButton({ isLiked, onLike, trackTitle }: LikeButtonProps) {
-  const reduceMotion = useReducedMotion();
-  // Cambia en cada toque para repetir el pequeño salto del ícono.
-  const [pulse, setPulse] = useState(0);
-
-  const handleClick = () => {
-    onLike();
-    setPulse((n) => n + 1);
-  };
-
-  const tone = isLiked
-    ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-    : "bg-black/30 text-white/80 hover:bg-black/50 hover:text-white";
-
-  return (
-    <button
-      type="button"
-      aria-label={isLiked ? `Te gusta ${trackTitle}` : `Me gusta ${trackTitle}`}
-      aria-pressed={isLiked}
-      onClick={handleClick}
-      className={`flex size-10 items-center justify-center rounded-full backdrop-blur transition-[background-color,color,scale] duration-200 active:scale-[0.92] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${tone}`}
-    >
-      <motion.span
-        key={pulse}
-        initial={pulse && !reduceMotion ? { scale: 0.6, rotate: -12 } : false}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", stiffness: 500, damping: 12 }}
-        className="flex"
-      >
-        <HandIcon className="size-4" />
-      </motion.span>
-    </button>
   );
 }

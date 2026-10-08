@@ -5,6 +5,8 @@ import { Pause, Play, Undo2 } from "lucide-react";
 import type { Album } from "@/lib/catalog-types";
 import { albumCover } from "./covers";
 import { DragRow } from "./DragRow";
+import { GradualBlur } from "./GradualBlur";
+import { TiltCard } from "./TiltCard";
 import type { V4Player } from "./useV4Player";
 
 function albumDuration(album: Album) {
@@ -65,7 +67,7 @@ export function AlbumsView({ albums, player, onOpenPlayer }: Props) {
       </header>
 
       <div
-        className={`flex flex-1 items-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${player.track ? "pb-48" : ""}`}
+        className={`flex flex-1 items-center transition-[padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${player.track ? "pb-60" : ""}`}
       >
         <DragRow>
           {albums.map((album) => (
@@ -90,21 +92,21 @@ type AlbumCardProps = {
 
 function AlbumCard({ album, isPlaying, onSelect }: AlbumCardProps) {
   return (
-    <li className="group w-60 shrink-0 sm:w-72">
+    <li className="group relative w-60 shrink-0 hover:z-10 sm:w-72">
       <button
         type="button"
         onClick={onSelect}
         aria-label={`Ver información de ${album.title}`}
         className="block w-full text-left focus-visible:outline-none"
       >
-        <div className="relative aspect-square overflow-hidden rounded-3xl bg-zinc-900 ring-white/40 group-focus-visible:ring-2">
+        <TiltCard className="relative aspect-square overflow-hidden rounded-3xl bg-zinc-900 ring-white/40 group-focus-visible:ring-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={albumCover(album)}
             alt=""
             loading="lazy"
             draggable={false}
-            className="size-full object-cover opacity-70 transition-[opacity,scale] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.04] group-hover:opacity-100 motion-reduce:transition-none"
+            className="size-full object-cover opacity-70 transition-opacity duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:opacity-100 motion-reduce:transition-none"
           />
           <span className="absolute left-4 top-3.5 text-[0.65rem] text-white/60">
             {album.year}
@@ -114,7 +116,7 @@ function AlbumCard({ album, isPlaying, onSelect }: AlbumCardProps) {
               Sonando
             </span>
           )}
-        </div>
+        </TiltCard>
 
         <div className="mt-3 px-3">
           <p className="truncate font-bold tracking-tight text-white/80 transition-colors duration-300 group-hover:text-white">
@@ -172,7 +174,7 @@ function AlbumDetail({ album, player, onOpenPlayer, onBack }: AlbumDetailProps) 
         </div>
       )}
 
-      <div className={`relative px-24 py-8 sm:px-32 ${player.track ? "pb-56" : "pb-16"}`}>
+      <div className={`relative px-24 py-8 sm:px-32 ${player.track ? "pb-72" : "pb-40"}`}>
         <div className="mx-auto max-w-3xl">
           <button
             type="button"
@@ -273,6 +275,9 @@ function AlbumDetail({ album, player, onOpenPlayer, onBack }: AlbumDetailProps) 
           </InfoSection>
         </div>
       </div>
+
+      {/* Borde inferior fijo: el contenido se difumina al pasar por debajo */}
+      <GradualBlur position="bottom" className="fixed inset-x-0 bottom-0 z-10 h-32" />
     </section>
   );
 }

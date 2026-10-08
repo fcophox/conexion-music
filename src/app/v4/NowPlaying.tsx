@@ -71,7 +71,7 @@ export function NowPlaying({ player, onOpen }: Props) {
           >
             <span className="block h-1 w-9 rounded-full bg-white/60 transition-[width,background-color] duration-200 group-hover/handle:w-12 group-hover/handle:bg-white group-active/handle:w-12 group-active/handle:bg-white" />
           </button>
-          <PlayerControls player={player} onTitleClick={onOpen} />
+          <PlayerControls player={player} onTitleClick={onOpen} isCompact />
         </div>
       </motion.div>
     </div>
