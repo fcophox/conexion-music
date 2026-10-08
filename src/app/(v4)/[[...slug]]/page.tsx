@@ -10,7 +10,7 @@ type Props = {
   params: Promise<{ slug?: string[] }>;
 };
 
-// Una sola página para /v4 y sus secciones (/v4/playlist, /v4/albums, …): así
+// Una sola página para la raíz y sus secciones (/playlist, /albums, …): así
 // el reproductor no se desmonta al cambiar de sección. Devuelve la sección de
 // la dirección, o null si la dirección no existe.
 async function resolveSection({ params }: Props) {
@@ -21,13 +21,10 @@ async function resolveSection({ params }: Props) {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const section = await resolveSection(props);
-  return {
-    title: sectionDocumentTitle(section ?? "home"),
-    robots: { index: false, follow: false },
-  };
+  return { title: sectionDocumentTitle(section ?? "home") };
 }
 
-// Versión 4 de la interfaz: espacio aparte para iterar sin tocar la home actual.
+// Interfaz principal del sitio (v4). La versión anterior quedó en /old-version.
 export default async function V4Page(props: Props) {
   if (!(await resolveSection(props))) notFound();
 

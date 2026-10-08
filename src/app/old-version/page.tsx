@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
-import HomeClient from "./HomeClient";
+import HomeClient from "../HomeClient";
 import { getCatalogWithStats, getMarketplaceProducts, getCarouselSlides } from "@/lib/catalog";
 
 export const dynamic = "force-dynamic";
+
+// Versión anterior de la home: se conserva en /old-version, fuera de los
+// buscadores. La versión actual vive en la raíz (grupo de rutas "(v4)").
+export const metadata: Metadata = {
+  title: "Conexión — versión anterior",
+  robots: { index: false, follow: false },
+};
 
 export default async function Page() {
   // Las canciones deshabilitadas desde el panel no llegan al playlist público.

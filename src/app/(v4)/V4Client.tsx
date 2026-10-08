@@ -21,7 +21,7 @@ type Props = {
 };
 
 export function V4Client({ albums }: Props) {
-  // La sección sale de la dirección (/v4/playlist, /v4/albums, …), así cada
+  // La sección sale de la dirección (/playlist, /albums, …), así cada
   // una se puede compartir y funcionan los botones atrás y adelante.
   const view = sectionFromPath(usePathname());
 

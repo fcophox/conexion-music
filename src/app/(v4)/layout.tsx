@@ -1,6 +1,7 @@
 import { Archivo } from "next/font/google";
 
-// Tipografía propia de la v4 (variable): no cambia la del resto del sitio.
+// Tipografía de la interfaz principal (v4). El panel y la versión anterior
+// siguen con la del layout raíz.
 const archivo = Archivo({
   subsets: ["latin"],
 });
