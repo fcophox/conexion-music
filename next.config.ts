@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/api/stream/**": ["./media/hls/**/*", "./media/keys/**/*"],
   },
+  // La v4 pasó a ser la versión principal (en la raíz): las direcciones
+  // /v4/… que ya se compartieron siguen funcionando.
+  async redirects() {
+    return [
+      { source: "/v4", destination: "/", permanent: false },
+      { source: "/v4/:path*", destination: "/:path*", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;
