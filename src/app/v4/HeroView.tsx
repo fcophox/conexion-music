@@ -1,6 +1,12 @@
+import { sectionPath } from "./sections";
 import { SpecularButton } from "./SpecularButton";
 
-export function HeroView() {
+type Props = {
+  // Abre la Playlist sin recargar la página (así no se corta la música).
+  onStart: () => void;
+};
+
+export function HeroView({ onStart }: Props) {
   return (
     <section className="relative flex flex-1 flex-col items-center justify-center px-6 text-center">
       <div className="relative flex max-w-xl flex-col items-center gap-8 animate-fade-in">
@@ -16,7 +22,9 @@ export function HeroView() {
           letras y música alternativa en un solo lugar.
         </p>
 
-        <SpecularButton href="/">Iniciar</SpecularButton>
+        <SpecularButton href={sectionPath("music")} onNavigate={onStart}>
+          Iniciar
+        </SpecularButton>
       </div>
     </section>
   );

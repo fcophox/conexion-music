@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type MouseEvent, type ReactNode } from "react";
 import Link from "next/link";
 
 // Parámetros del Specular Button de React Bits (con sus valores por defecto).
@@ -30,13 +30,23 @@ const shineStyle: CSSProperties = {
 
 type Props = {
   href: string;
+  // Si se pasa, un clic normal lo ejecuta en vez de navegar (el enlace sigue
+  // sirviendo para abrir en otra pestaña).
+  onNavigate?: () => void;
   children: ReactNode;
 };
 
 // Botón de vidrio con borde especular: un destello recorre el borde apuntando
 // al cursor y se enciende a medida que el mouse se acerca.
-export function SpecularButton({ href, children }: Props) {
+export function SpecularButton({ href, onNavigate, children }: Props) {
   const ref = useRef<HTMLAnchorElement>(null);
+
+  const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
+    const isPlainClick = e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey;
+    if (!onNavigate || !isPlainClick) return;
+    e.preventDefault();
+    onNavigate();
+  };
 
   useEffect(() => {
     const el = ref.current;
@@ -77,6 +87,7 @@ export function SpecularButton({ href, children }: Props) {
     <Link
       ref={ref}
       href={href}
+      onClick={handleClick}
       style={{ borderRadius: RADIUS, boxShadow: `inset 0 0 0 ${THICKNESS}px ${BASE_COLOR}, inset 0 1px 0 rgba(255,255,255,0.04), 0 8px 24px rgba(0,0,0,0.25)` }}
       className="relative inline-flex items-center justify-center px-10 py-[1.125rem] font-medium text-[#f5f5f5] transition-[scale,background-color] duration-200 hover:bg-white/[0.03] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
