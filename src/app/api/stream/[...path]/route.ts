@@ -13,6 +13,7 @@ import {
   verifyToken,
   allowKeyRequest,
   NO_STORE_HEADERS,
+  IMMUTABLE_HEADERS,
 } from "@/lib/stream";
 import { incrementLike, incrementPlay } from "@/lib/catalog";
 
@@ -86,9 +87,10 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
       }
 
       const token = signToken(trackId, sessionId!);
-      const rewritten = manifest
-        .replace('URI="__KEY_URI__"', `URI="/api/stream/${trackId}/key?tk=${token}"`)
-        .replace(/^(seg_\d+\.ts)$/gm, `$1?tk=${token}`);
+      const rewritten = manifest.replace(
+        'URI="__KEY_URI__"',
+        `URI="/api/stream/${trackId}/key?tk=${token}"`
+      );
 
       const response = new NextResponse(rewritten, {
         headers: {
@@ -146,19 +148,13 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
     }
 
     // Endpoint: /api/stream/[trackId]/[segment] (e.g. seg_0.ts)
+    // Los segmentos van cifrados con AES-128: sin la clave son ruido. Por eso
+    // se sirven sin token y cacheados, para que el CDN los entregue sin
+    // invocar la función una vez por cada trozo de audio. Lo que protege el
+    // catálogo sigue siendo /key (cookie de sesión + token + rate limit).
     const segment = actionOrSegment;
     if (!isSafeId(trackId) || !isSafeSegmentName(segment)) {
       return NextResponse.json({ error: "invalid" }, { status: 400 });
-    }
-
-    const sessionId = request.cookies.get(SESSION_COOKIE)?.value;
-    if (!isValidSessionId(sessionId)) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-
-    const token = request.nextUrl.searchParams.get("tk");
-    if (!verifyToken(token, trackId, sessionId)) {
-      return NextResponse.json({ error: "forbidden" }, { status: 403 });
     }
 
     let data: Buffer;
@@ -170,7 +166,7 @@ export async function GET(request: NextRequest, ctx: RouteContext) {
 
     return new NextResponse(new Uint8Array(data), {
       headers: {
-        ...NO_STORE_HEADERS,
+        ...IMMUTABLE_HEADERS,
         "Content-Type": "video/mp2t",
         "Content-Length": String(data.length),
       },
