@@ -87,3 +87,10 @@ export const NO_STORE_HEADERS = {
   "Cache-Control": "no-store, max-age=0",
   "X-Content-Type-Options": "nosniff",
 } as const;
+
+// Contenido inmutable y ya cifrado (los segmentos HLS): se cachea para
+// siempre en el CDN, que es lo que evita una invocación por segmento.
+export const IMMUTABLE_HEADERS = {
+  "Cache-Control": "public, max-age=31536000, immutable",
+  "X-Content-Type-Options": "nosniff",
+} as const;

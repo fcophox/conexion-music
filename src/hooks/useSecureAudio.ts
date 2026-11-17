@@ -82,7 +82,17 @@ export function useSecureAudio(options: { onEnded: () => void }) {
       if (startAt > 0) audio.currentTime = startAt;
       setReadyTrackId(trackId);
     } else if (Hls.isSupported()) {
-      const hls = new Hls({ startPosition: startAt });
+      // Buffer acotado: por defecto hls.js tira hacia adelante hasta 600 s
+      // (y 60 MB), así que una canción que alguien salta a los 5 segundos se
+      // descargaba casi entera. Con ~30 s de margen la reproducción sigue
+      // siendo estable y no se paga el audio que nadie llega a escuchar.
+      const hls = new Hls({
+        startPosition: startAt,
+        maxBufferLength: 30,
+        maxMaxBufferLength: 60,
+        maxBufferSize: 10 * 1000 * 1000,
+        backBufferLength: 30,
+      });
       hlsRef.current = hls;
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         if (hlsRef.current === hls) setReadyTrackId(trackId);
